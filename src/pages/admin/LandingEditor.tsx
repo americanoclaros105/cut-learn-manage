@@ -58,9 +58,17 @@ const defaultContent = {
     instagram: 'https://instagram.com',
     facebook: 'https://facebook.com',
     tiktok: 'https://tiktok.com',
+    youtube: '',
   },
   theme_colors: defaultThemeColors,
 };
+
+interface SocialLinks {
+  instagram?: string;
+  facebook?: string;
+  tiktok?: string;
+  youtube?: string;
+}
 
 export const LandingEditor = () => {
   const { data: landingContent, isLoading } = useLandingContent();
@@ -74,7 +82,12 @@ export const LandingEditor = () => {
         about: landingContent.about,
         courses_section: landingContent.courses_section,
         contact: landingContent.contact,
-        social_links: landingContent.social_links,
+        social_links: {
+          instagram: landingContent.social_links?.instagram || '',
+          facebook: landingContent.social_links?.facebook || '',
+          tiktok: landingContent.social_links?.tiktok || '',
+          youtube: landingContent.social_links?.youtube || '',
+        },
         theme_colors: landingContent.theme_colors || defaultThemeColors,
       });
     }
@@ -204,7 +217,12 @@ export const LandingEditor = () => {
         <TabsContent value="social">
           <SocialEditor
             content={content.social_links}
-            onChange={(social_links) => setContent({ ...content, social_links })}
+            onChange={(social_links) => setContent({ ...content, social_links: {
+              instagram: social_links.instagram || '',
+              facebook: social_links.facebook || '',
+              tiktok: social_links.tiktok || '',
+              youtube: social_links.youtube || '',
+            }})}
           />
         </TabsContent>
       </Tabs>

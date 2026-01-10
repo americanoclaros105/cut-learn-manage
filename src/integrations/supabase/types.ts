@@ -26,6 +26,7 @@ export type Database = {
           price: number
           status: Database["public"]["Enums"]["course_status"]
           tags: string[] | null
+          theme_colors: Json | null
           title: string
           updated_at: string
         }
@@ -40,6 +41,7 @@ export type Database = {
           price?: number
           status?: Database["public"]["Enums"]["course_status"]
           tags?: string[] | null
+          theme_colors?: Json | null
           title: string
           updated_at?: string
         }
@@ -54,6 +56,7 @@ export type Database = {
           price?: number
           status?: Database["public"]["Enums"]["course_status"]
           tags?: string[] | null
+          theme_colors?: Json | null
           title?: string
           updated_at?: string
         }
@@ -160,6 +163,7 @@ export type Database = {
       }
       lessons: {
         Row: {
+          attachments: Json | null
           content: string | null
           created_at: string
           duration: string | null
@@ -167,10 +171,12 @@ export type Database = {
           is_required: boolean
           module_id: string
           order_num: number
+          thumbnail: string | null
           title: string
           type: Database["public"]["Enums"]["lesson_type"]
         }
         Insert: {
+          attachments?: Json | null
           content?: string | null
           created_at?: string
           duration?: string | null
@@ -178,10 +184,12 @@ export type Database = {
           is_required?: boolean
           module_id: string
           order_num?: number
+          thumbnail?: string | null
           title: string
           type?: Database["public"]["Enums"]["lesson_type"]
         }
         Update: {
+          attachments?: Json | null
           content?: string | null
           created_at?: string
           duration?: string | null
@@ -189,6 +197,7 @@ export type Database = {
           is_required?: boolean
           module_id?: string
           order_num?: number
+          thumbnail?: string | null
           title?: string
           type?: Database["public"]["Enums"]["lesson_type"]
         }
@@ -206,6 +215,7 @@ export type Database = {
         Row: {
           course_id: string
           created_at: string
+          description: string | null
           id: string
           order_num: number
           title: string
@@ -213,6 +223,7 @@ export type Database = {
         Insert: {
           course_id: string
           created_at?: string
+          description?: string | null
           id?: string
           order_num?: number
           title: string
@@ -220,6 +231,7 @@ export type Database = {
         Update: {
           course_id?: string
           created_at?: string
+          description?: string | null
           id?: string
           order_num?: number
           title?: string

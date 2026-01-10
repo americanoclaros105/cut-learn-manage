@@ -1,29 +1,80 @@
 import { useState, useEffect } from 'react';
-import { getLandingContent, saveLandingContent } from '@/lib/storage';
-import { LandingContent } from '@/types';
+import { useLandingContent, useUpdateLandingContent, LandingContent } from '@/hooks/useLandingContent';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
-import { Save } from 'lucide-react';
+import { Save, Loader2 } from 'lucide-react';
+
+const defaultContent: Omit<LandingContent, 'id' | 'updated_at'> = {
+  hero: {
+    title: 'El Arte del Estilo Masculino',
+    subtitle: 'Más de 10 años transformando estilos y creando experiencias únicas en barbería',
+    ctaText: 'Reservar Cita',
+    ctaLink: 'whatsapp',
+    backgroundImage: 'https://images.unsplash.com/photo-1585747860715-2ba37e788b70?w=1920',
+  },
+  about: {
+    title: 'Quiénes Somos',
+    description: 'Somos más que una barbería, somos un espacio donde el estilo se encuentra con la tradición.',
+    mission: 'Ofrecer servicios de barbería de la más alta calidad.',
+    vision: 'Ser reconocidos como la barbería líder en formación y servicio.',
+    image: 'https://images.unsplash.com/photo-1621605815971-fbc98d665033?w=800',
+  },
+  courses_section: {
+    title: 'Academia de Barbería',
+    subtitle: 'Aprende de los mejores profesionales',
+  },
+  contact: {
+    phone: '+1 234 567 8900',
+    whatsapp: '+1234567890',
+    whatsappMessage: 'Hola! Me gustaría reservar una cita.',
+    email: 'info@barbershop.com',
+    address: 'Calle Principal 123, Ciudad',
+    hours: 'Lunes a Sábado: 9:00 AM - 8:00 PM',
+  },
+  social_links: {
+    instagram: 'https://instagram.com',
+    facebook: 'https://facebook.com',
+    tiktok: 'https://tiktok.com',
+  },
+};
 
 export const LandingEditor = () => {
-  const [content, setContent] = useState<LandingContent | null>(null);
+  const { data: landingContent, isLoading } = useLandingContent();
+  const updateContent = useUpdateLandingContent();
+  const [content, setContent] = useState<Omit<LandingContent, 'id' | 'updated_at'>>(defaultContent);
 
   useEffect(() => {
-    setContent(getLandingContent());
-  }, []);
+    if (landingContent) {
+      setContent({
+        hero: landingContent.hero,
+        about: landingContent.about,
+        courses_section: landingContent.courses_section,
+        contact: landingContent.contact,
+        social_links: landingContent.social_links,
+      });
+    }
+  }, [landingContent]);
 
-  const handleSave = () => {
-    if (content) {
-      saveLandingContent(content);
+  const handleSave = async () => {
+    try {
+      await updateContent.mutateAsync(content);
       toast.success('Cambios guardados correctamente');
+    } catch (error) {
+      toast.error('Error al guardar los cambios');
     }
   };
 
-  if (!content) return null;
+  if (isLoading) {
+    return (
+      <div className="p-8 flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="p-8">
@@ -32,8 +83,12 @@ export const LandingEditor = () => {
           <h1 className="text-3xl font-bold text-foreground">Editor de Landing</h1>
           <p className="text-muted-foreground">Personaliza el contenido de tu página principal</p>
         </div>
-        <Button onClick={handleSave} className="gap-2">
-          <Save className="w-4 h-4" />
+        <Button onClick={handleSave} className="gap-2" disabled={updateContent.isPending}>
+          {updateContent.isPending ? (
+            <Loader2 className="w-4 h-4 animate-spin" />
+          ) : (
+            <Save className="w-4 h-4" />
+          )}
           Guardar Cambios
         </Button>
       </div>
@@ -247,11 +302,11 @@ export const LandingEditor = () => {
               <div>
                 <label className="text-sm font-medium">Instagram</label>
                 <Input
-                  value={content.socialLinks.instagram || ''}
+                  value={content.social_links.instagram || ''}
                   onChange={(e) =>
                     setContent({
                       ...content,
-                      socialLinks: { ...content.socialLinks, instagram: e.target.value },
+                      social_links: { ...content.social_links, instagram: e.target.value },
                     })
                   }
                   placeholder="https://instagram.com/..."
@@ -260,11 +315,11 @@ export const LandingEditor = () => {
               <div>
                 <label className="text-sm font-medium">Facebook</label>
                 <Input
-                  value={content.socialLinks.facebook || ''}
+                  value={content.social_links.facebook || ''}
                   onChange={(e) =>
                     setContent({
                       ...content,
-                      socialLinks: { ...content.socialLinks, facebook: e.target.value },
+                      social_links: { ...content.social_links, facebook: e.target.value },
                     })
                   }
                   placeholder="https://facebook.com/..."
@@ -273,11 +328,11 @@ export const LandingEditor = () => {
               <div>
                 <label className="text-sm font-medium">TikTok</label>
                 <Input
-                  value={content.socialLinks.tiktok || ''}
+                  value={content.social_links.tiktok || ''}
                   onChange={(e) =>
                     setContent({
                       ...content,
-                      socialLinks: { ...content.socialLinks, tiktok: e.target.value },
+                      social_links: { ...content.social_links, tiktok: e.target.value },
                     })
                   }
                   placeholder="https://tiktok.com/..."
@@ -286,11 +341,11 @@ export const LandingEditor = () => {
               <div>
                 <label className="text-sm font-medium">YouTube</label>
                 <Input
-                  value={content.socialLinks.youtube || ''}
+                  value={content.social_links.youtube || ''}
                   onChange={(e) =>
                     setContent({
                       ...content,
-                      socialLinks: { ...content.socialLinks, youtube: e.target.value },
+                      social_links: { ...content.social_links, youtube: e.target.value },
                     })
                   }
                   placeholder="https://youtube.com/..."

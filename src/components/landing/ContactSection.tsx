@@ -2,7 +2,7 @@ import { LandingContent } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Phone, Mail, MapPin, Clock, MessageCircle } from 'lucide-react';
+import { Phone, Mail, MapPin, Clock } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
 
@@ -87,7 +87,7 @@ export const ContactSection = ({ content }: ContactSectionProps) => {
               onClick={handleWhatsAppClick}
               className="w-full sm:w-auto gap-2 bg-green-600 hover:bg-green-700"
             >
-              <MessageCircle className="w-5 h-5" />
+              <i className="fab fa-whatsapp whatsapp-icon text-xl" />
               Escríbenos por WhatsApp
             </Button>
           </div>

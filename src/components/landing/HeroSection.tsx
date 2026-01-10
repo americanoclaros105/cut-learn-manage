@@ -1,6 +1,5 @@
 import { Button } from "@/components/ui/button";
 import { LandingContent } from "@/types";
-import { MessageCircle } from "lucide-react";
 
 interface HeroSectionProps {
   content: LandingContent["hero"];
@@ -55,7 +54,7 @@ export const HeroSection = ({ content, whatsapp, whatsappMessage }: HeroSectionP
             onClick={handleWhatsAppClick}
             className="text-lg px-8 py-6 bg-primary hover:bg-primary/90 gap-2"
           >
-            <MessageCircle className="w-5 h-5" />
+            <i className="fab fa-whatsapp whatsapp-icon text-xl" />
             {content.ctaText}
           </Button>
           <Button

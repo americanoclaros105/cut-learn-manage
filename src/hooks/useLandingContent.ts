@@ -1,6 +1,16 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 
+export interface ThemeColors {
+  primary: string;
+  primaryForeground: string;
+  accent: string;
+  background: string;
+  foreground: string;
+  muted: string;
+  mutedForeground: string;
+}
+
 export interface LandingContent {
   id: string;
   hero: {
@@ -36,6 +46,7 @@ export interface LandingContent {
     tiktok?: string;
     youtube?: string;
   };
+  theme_colors?: ThemeColors;
   updated_at: string;
 }
 

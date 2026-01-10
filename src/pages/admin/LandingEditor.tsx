@@ -1,14 +1,33 @@
 import { useState, useEffect } from 'react';
-import { useLandingContent, useUpdateLandingContent, LandingContent } from '@/hooks/useLandingContent';
+import { useLandingContent, useUpdateLandingContent, LandingContent, ThemeColors } from '@/hooks/useLandingContent';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { toast } from 'sonner';
-import { Save, Loader2 } from 'lucide-react';
+import { Save, Loader2, Palette, Image, Users, Scissors, ShoppingBag, Images, MessageSquare, Phone, Share2 } from 'lucide-react';
 
-const defaultContent: Omit<LandingContent, 'id' | 'updated_at'> = {
+// Landing Editors
+import { HeroEditor } from '@/components/admin/landing/HeroEditor';
+import { AboutEditor } from '@/components/admin/landing/AboutEditor';
+import { ServicesEditor } from '@/components/admin/landing/ServicesEditor';
+import { ProductsEditor } from '@/components/admin/landing/ProductsEditor';
+import { GalleryEditor } from '@/components/admin/landing/GalleryEditor';
+import { TestimonialsEditor } from '@/components/admin/landing/TestimonialsEditor';
+import { ContactEditor } from '@/components/admin/landing/ContactEditor';
+import { SocialEditor } from '@/components/admin/landing/SocialEditor';
+import { ThemeEditor } from '@/components/admin/landing/ThemeEditor';
+
+const defaultThemeColors: ThemeColors = {
+  primary: '0 72% 51%',
+  primaryForeground: '0 0% 100%',
+  accent: '0 0% 10%',
+  background: '0 0% 100%',
+  foreground: '0 0% 5%',
+  muted: '0 0% 96%',
+  mutedForeground: '0 0% 45%',
+};
+
+const defaultContent = {
   hero: {
     title: 'El Arte del Estilo Masculino',
     subtitle: 'Más de 10 años transformando estilos y creando experiencias únicas en barbería',
@@ -40,12 +59,13 @@ const defaultContent: Omit<LandingContent, 'id' | 'updated_at'> = {
     facebook: 'https://facebook.com',
     tiktok: 'https://tiktok.com',
   },
+  theme_colors: defaultThemeColors,
 };
 
 export const LandingEditor = () => {
   const { data: landingContent, isLoading } = useLandingContent();
   const updateContent = useUpdateLandingContent();
-  const [content, setContent] = useState<Omit<LandingContent, 'id' | 'updated_at'>>(defaultContent);
+  const [content, setContent] = useState(defaultContent);
 
   useEffect(() => {
     if (landingContent) {
@@ -55,6 +75,7 @@ export const LandingEditor = () => {
         courses_section: landingContent.courses_section,
         contact: landingContent.contact,
         social_links: landingContent.social_links,
+        theme_colors: landingContent.theme_colors || defaultThemeColors,
       });
     }
   }, [landingContent]);
@@ -77,13 +98,13 @@ export const LandingEditor = () => {
   }
 
   return (
-    <div className="p-8">
-      <div className="flex justify-between items-center mb-8">
+    <div className="p-4 md:p-8">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Editor de Landing</h1>
-          <p className="text-muted-foreground">Personaliza el contenido de tu página principal</p>
+          <h1 className="text-2xl md:text-3xl font-bold text-foreground">Editor de Landing</h1>
+          <p className="text-muted-foreground text-sm">Personaliza todo el contenido de tu página</p>
         </div>
-        <Button onClick={handleSave} className="gap-2" disabled={updateContent.isPending}>
+        <Button onClick={handleSave} className="gap-2 w-full sm:w-auto" disabled={updateContent.isPending}>
           {updateContent.isPending ? (
             <Loader2 className="w-4 h-4 animate-spin" />
           ) : (
@@ -93,266 +114,98 @@ export const LandingEditor = () => {
         </Button>
       </div>
 
-      <Tabs defaultValue="hero" className="space-y-6">
-        <TabsList className="bg-secondary">
-          <TabsTrigger value="hero">Hero</TabsTrigger>
-          <TabsTrigger value="about">Nosotros</TabsTrigger>
-          <TabsTrigger value="contact">Contacto</TabsTrigger>
-          <TabsTrigger value="social">Redes</TabsTrigger>
-        </TabsList>
+      <Tabs defaultValue="theme" className="space-y-6">
+        <ScrollArea className="w-full whitespace-nowrap">
+          <TabsList className="bg-secondary inline-flex w-max">
+            <TabsTrigger value="theme" className="gap-2">
+              <Palette className="w-4 h-4" />
+              <span className="hidden sm:inline">Tema</span>
+            </TabsTrigger>
+            <TabsTrigger value="hero" className="gap-2">
+              <Image className="w-4 h-4" />
+              <span className="hidden sm:inline">Hero</span>
+            </TabsTrigger>
+            <TabsTrigger value="about" className="gap-2">
+              <Users className="w-4 h-4" />
+              <span className="hidden sm:inline">Nosotros</span>
+            </TabsTrigger>
+            <TabsTrigger value="services" className="gap-2">
+              <Scissors className="w-4 h-4" />
+              <span className="hidden sm:inline">Servicios</span>
+            </TabsTrigger>
+            <TabsTrigger value="products" className="gap-2">
+              <ShoppingBag className="w-4 h-4" />
+              <span className="hidden sm:inline">Productos</span>
+            </TabsTrigger>
+            <TabsTrigger value="gallery" className="gap-2">
+              <Images className="w-4 h-4" />
+              <span className="hidden sm:inline">Galería</span>
+            </TabsTrigger>
+            <TabsTrigger value="testimonials" className="gap-2">
+              <MessageSquare className="w-4 h-4" />
+              <span className="hidden sm:inline">Testimonios</span>
+            </TabsTrigger>
+            <TabsTrigger value="contact" className="gap-2">
+              <Phone className="w-4 h-4" />
+              <span className="hidden sm:inline">Contacto</span>
+            </TabsTrigger>
+            <TabsTrigger value="social" className="gap-2">
+              <Share2 className="w-4 h-4" />
+              <span className="hidden sm:inline">Redes</span>
+            </TabsTrigger>
+          </TabsList>
+          <ScrollBar orientation="horizontal" />
+        </ScrollArea>
+
+        <TabsContent value="theme">
+          <ThemeEditor
+            colors={content.theme_colors}
+            onChange={(colors) => setContent({ ...content, theme_colors: colors })}
+          />
+        </TabsContent>
 
         <TabsContent value="hero">
-          <Card>
-            <CardHeader>
-              <CardTitle>Sección Hero</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <label className="text-sm font-medium">Título</label>
-                <Input
-                  value={content.hero.title}
-                  onChange={(e) =>
-                    setContent({ ...content, hero: { ...content.hero, title: e.target.value } })
-                  }
-                />
-              </div>
-              <div>
-                <label className="text-sm font-medium">Subtítulo</label>
-                <Textarea
-                  value={content.hero.subtitle}
-                  onChange={(e) =>
-                    setContent({ ...content, hero: { ...content.hero, subtitle: e.target.value } })
-                  }
-                />
-              </div>
-              <div>
-                <label className="text-sm font-medium">Texto del Botón CTA</label>
-                <Input
-                  value={content.hero.ctaText}
-                  onChange={(e) =>
-                    setContent({ ...content, hero: { ...content.hero, ctaText: e.target.value } })
-                  }
-                />
-              </div>
-              <div>
-                <label className="text-sm font-medium">URL de Imagen de Fondo</label>
-                <Input
-                  value={content.hero.backgroundImage}
-                  onChange={(e) =>
-                    setContent({
-                      ...content,
-                      hero: { ...content.hero, backgroundImage: e.target.value },
-                    })
-                  }
-                />
-              </div>
-            </CardContent>
-          </Card>
+          <HeroEditor
+            content={content.hero}
+            onChange={(hero) => setContent({ ...content, hero })}
+          />
         </TabsContent>
 
         <TabsContent value="about">
-          <Card>
-            <CardHeader>
-              <CardTitle>Sección Nosotros</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <label className="text-sm font-medium">Título</label>
-                <Input
-                  value={content.about.title}
-                  onChange={(e) =>
-                    setContent({ ...content, about: { ...content.about, title: e.target.value } })
-                  }
-                />
-              </div>
-              <div>
-                <label className="text-sm font-medium">Descripción</label>
-                <Textarea
-                  value={content.about.description}
-                  onChange={(e) =>
-                    setContent({
-                      ...content,
-                      about: { ...content.about, description: e.target.value },
-                    })
-                  }
-                  rows={4}
-                />
-              </div>
-              <div>
-                <label className="text-sm font-medium">Misión</label>
-                <Textarea
-                  value={content.about.mission}
-                  onChange={(e) =>
-                    setContent({ ...content, about: { ...content.about, mission: e.target.value } })
-                  }
-                />
-              </div>
-              <div>
-                <label className="text-sm font-medium">Visión</label>
-                <Textarea
-                  value={content.about.vision}
-                  onChange={(e) =>
-                    setContent({ ...content, about: { ...content.about, vision: e.target.value } })
-                  }
-                />
-              </div>
-              <div>
-                <label className="text-sm font-medium">URL de Imagen</label>
-                <Input
-                  value={content.about.image}
-                  onChange={(e) =>
-                    setContent({ ...content, about: { ...content.about, image: e.target.value } })
-                  }
-                />
-              </div>
-            </CardContent>
-          </Card>
+          <AboutEditor
+            content={content.about}
+            onChange={(about) => setContent({ ...content, about })}
+          />
+        </TabsContent>
+
+        <TabsContent value="services">
+          <ServicesEditor />
+        </TabsContent>
+
+        <TabsContent value="products">
+          <ProductsEditor />
+        </TabsContent>
+
+        <TabsContent value="gallery">
+          <GalleryEditor />
+        </TabsContent>
+
+        <TabsContent value="testimonials">
+          <TestimonialsEditor />
         </TabsContent>
 
         <TabsContent value="contact">
-          <Card>
-            <CardHeader>
-              <CardTitle>Información de Contacto</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid md:grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm font-medium">Teléfono</label>
-                  <Input
-                    value={content.contact.phone}
-                    onChange={(e) =>
-                      setContent({
-                        ...content,
-                        contact: { ...content.contact, phone: e.target.value },
-                      })
-                    }
-                  />
-                </div>
-                <div>
-                  <label className="text-sm font-medium">WhatsApp (solo números)</label>
-                  <Input
-                    value={content.contact.whatsapp}
-                    onChange={(e) =>
-                      setContent({
-                        ...content,
-                        contact: { ...content.contact, whatsapp: e.target.value },
-                      })
-                    }
-                  />
-                </div>
-              </div>
-              <div>
-                <label className="text-sm font-medium">Mensaje predefinido de WhatsApp</label>
-                <Textarea
-                  value={content.contact.whatsappMessage}
-                  onChange={(e) =>
-                    setContent({
-                      ...content,
-                      contact: { ...content.contact, whatsappMessage: e.target.value },
-                    })
-                  }
-                />
-              </div>
-              <div>
-                <label className="text-sm font-medium">Email</label>
-                <Input
-                  value={content.contact.email}
-                  onChange={(e) =>
-                    setContent({
-                      ...content,
-                      contact: { ...content.contact, email: e.target.value },
-                    })
-                  }
-                />
-              </div>
-              <div>
-                <label className="text-sm font-medium">Dirección</label>
-                <Input
-                  value={content.contact.address}
-                  onChange={(e) =>
-                    setContent({
-                      ...content,
-                      contact: { ...content.contact, address: e.target.value },
-                    })
-                  }
-                />
-              </div>
-              <div>
-                <label className="text-sm font-medium">Horarios</label>
-                <Input
-                  value={content.contact.hours}
-                  onChange={(e) =>
-                    setContent({
-                      ...content,
-                      contact: { ...content.contact, hours: e.target.value },
-                    })
-                  }
-                />
-              </div>
-            </CardContent>
-          </Card>
+          <ContactEditor
+            content={content.contact}
+            onChange={(contact) => setContent({ ...content, contact })}
+          />
         </TabsContent>
 
         <TabsContent value="social">
-          <Card>
-            <CardHeader>
-              <CardTitle>Redes Sociales</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <label className="text-sm font-medium">Instagram</label>
-                <Input
-                  value={content.social_links.instagram || ''}
-                  onChange={(e) =>
-                    setContent({
-                      ...content,
-                      social_links: { ...content.social_links, instagram: e.target.value },
-                    })
-                  }
-                  placeholder="https://instagram.com/..."
-                />
-              </div>
-              <div>
-                <label className="text-sm font-medium">Facebook</label>
-                <Input
-                  value={content.social_links.facebook || ''}
-                  onChange={(e) =>
-                    setContent({
-                      ...content,
-                      social_links: { ...content.social_links, facebook: e.target.value },
-                    })
-                  }
-                  placeholder="https://facebook.com/..."
-                />
-              </div>
-              <div>
-                <label className="text-sm font-medium">TikTok</label>
-                <Input
-                  value={content.social_links.tiktok || ''}
-                  onChange={(e) =>
-                    setContent({
-                      ...content,
-                      social_links: { ...content.social_links, tiktok: e.target.value },
-                    })
-                  }
-                  placeholder="https://tiktok.com/..."
-                />
-              </div>
-              <div>
-                <label className="text-sm font-medium">YouTube</label>
-                <Input
-                  value={content.social_links.youtube || ''}
-                  onChange={(e) =>
-                    setContent({
-                      ...content,
-                      social_links: { ...content.social_links, youtube: e.target.value },
-                    })
-                  }
-                  placeholder="https://youtube.com/..."
-                />
-              </div>
-            </CardContent>
-          </Card>
+          <SocialEditor
+            content={content.social_links}
+            onChange={(social_links) => setContent({ ...content, social_links })}
+          />
         </TabsContent>
       </Tabs>
     </div>

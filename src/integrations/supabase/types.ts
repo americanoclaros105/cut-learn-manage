@@ -91,6 +91,7 @@ export type Database = {
           hero: Json
           id: string
           social_links: Json
+          theme_colors: Json | null
           updated_at: string
         }
         Insert: {
@@ -100,6 +101,7 @@ export type Database = {
           hero?: Json
           id?: string
           social_links?: Json
+          theme_colors?: Json | null
           updated_at?: string
         }
         Update: {
@@ -109,6 +111,7 @@ export type Database = {
           hero?: Json
           id?: string
           social_links?: Json
+          theme_colors?: Json | null
           updated_at?: string
         }
         Relationships: []

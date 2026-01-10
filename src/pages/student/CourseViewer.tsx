@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { getCourseById, getUserById, getStudentProgress, updateStudentProgress } from '@/lib/storage';
-import { Course, Lesson } from '@/types';
+import { useCourseWithModules, Lesson } from '@/hooks/useCourses';
+import { useCourseProgress, useMarkLessonComplete, useUserAssignedCourses } from '@/hooks/useProgress';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -12,11 +12,11 @@ import {
   ChevronRight,
   ChevronLeft,
   CheckCircle,
-  Circle,
   PlayCircle,
   FileText,
   File,
   Lock,
+  Loader2,
 } from 'lucide-react';
 
 export const CourseViewer = () => {
@@ -24,73 +24,57 @@ export const CourseViewer = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   
-  const [course, setCourse] = useState<Course | null>(null);
+  const { data: course, isLoading: loadingCourse } = useCourseWithModules(courseId || '');
+  const { data: assignedCourses = [], isLoading: loadingAssigned } = useUserAssignedCourses();
+  const { data: progressData = [], isLoading: loadingProgress } = useCourseProgress(courseId || '');
+  const markComplete = useMarkLessonComplete();
+  
   const [currentLesson, setCurrentLesson] = useState<Lesson | null>(null);
   const [currentModuleIndex, setCurrentModuleIndex] = useState(0);
   const [currentLessonIndex, setCurrentLessonIndex] = useState(0);
-  const [completedLessons, setCompletedLessons] = useState<string[]>([]);
-  const [hasAccess, setHasAccess] = useState(false);
+
+  const hasAccess = courseId ? assignedCourses.includes(courseId) : false;
+  const completedLessons = progressData.map(p => p.lesson_id);
 
   useEffect(() => {
-    if (!courseId || !user) return;
-
-    const courseData = getCourseById(courseId);
-    const userData = getUserById(user.id);
-
-    if (!courseData) {
-      toast.error('Curso no encontrado');
-      navigate('/estudiante');
-      return;
+    if (course && course.modules && course.modules.length > 0 && course.modules[0].lessons?.length > 0) {
+      setCurrentLesson(course.modules[0].lessons[0]);
     }
-
-    setCourse(courseData);
-
-    // Check access
-    if (userData && userData.assignedCourses.includes(courseId)) {
-      setHasAccess(true);
-
-      // Get progress
-      const progress = getStudentProgress(user.id);
-      const courseProgress = progress?.courses.find((c) => c.courseId === courseId);
-      setCompletedLessons(courseProgress?.lessonCompleted || []);
-
-      // Set first lesson
-      if (courseData.modules.length > 0 && courseData.modules[0].lessons.length > 0) {
-        setCurrentLesson(courseData.modules[0].lessons[0]);
-      }
-    } else {
-      setHasAccess(false);
-    }
-  }, [courseId, user, navigate]);
+  }, [course]);
 
   const getAllLessons = () => {
-    if (!course) return [];
+    if (!course || !course.modules) return [];
     return course.modules.flatMap((m, mIndex) =>
-      m.lessons.map((l, lIndex) => ({ ...l, moduleIndex: mIndex, lessonIndex: lIndex }))
+      (m.lessons || []).map((l, lIndex) => ({ ...l, moduleIndex: mIndex, lessonIndex: lIndex }))
     );
   };
 
   const handleLessonClick = (moduleIndex: number, lessonIndex: number) => {
-    if (!course) return;
-    const lesson = course.modules[moduleIndex].lessons[lessonIndex];
-    setCurrentModuleIndex(moduleIndex);
-    setCurrentLessonIndex(lessonIndex);
-    setCurrentLesson(lesson);
+    if (!course || !course.modules) return;
+    const lesson = course.modules[moduleIndex].lessons?.[lessonIndex];
+    if (lesson) {
+      setCurrentModuleIndex(moduleIndex);
+      setCurrentLessonIndex(lessonIndex);
+      setCurrentLesson(lesson);
+    }
   };
 
-  const handleMarkComplete = () => {
-    if (!currentLesson || !user || !courseId) return;
+  const handleMarkComplete = async () => {
+    if (!currentLesson || !courseId) return;
 
-    updateStudentProgress(user.id, courseId, currentLesson.id);
-    setCompletedLessons((prev) => [...prev, currentLesson.id]);
-    toast.success('Lección completada');
+    try {
+      await markComplete.mutateAsync({ lessonId: currentLesson.id, courseId });
+      toast.success('Lección completada');
 
-    // Auto-advance to next lesson
-    const allLessons = getAllLessons();
-    const currentIndex = allLessons.findIndex((l) => l.id === currentLesson.id);
-    if (currentIndex < allLessons.length - 1) {
-      const next = allLessons[currentIndex + 1];
-      handleLessonClick(next.moduleIndex, next.lessonIndex);
+      // Auto-advance to next lesson
+      const allLessons = getAllLessons();
+      const currentIndex = allLessons.findIndex((l) => l.id === currentLesson.id);
+      if (currentIndex < allLessons.length - 1) {
+        const next = allLessons[currentIndex + 1];
+        handleLessonClick(next.moduleIndex, next.lessonIndex);
+      }
+    } catch (error) {
+      toast.error('Error al marcar la lección');
     }
   };
 
@@ -115,8 +99,8 @@ export const CourseViewer = () => {
   const isLessonCompleted = (lessonId: string) => completedLessons.includes(lessonId);
 
   const getProgressPercentage = () => {
-    if (!course) return 0;
-    const totalLessons = course.modules.reduce((a, m) => a + m.lessons.length, 0);
+    if (!course || !course.modules) return 0;
+    const totalLessons = course.modules.reduce((a, m) => a + (m.lessons?.length || 0), 0);
     return totalLessons > 0 ? Math.round((completedLessons.length / totalLessons) * 100) : 0;
   };
 
@@ -133,6 +117,14 @@ export const CourseViewer = () => {
         return <FileText className="w-4 h-4" />;
     }
   };
+
+  if (loadingCourse || loadingAssigned || loadingProgress) {
+    return (
+      <div className="p-8 flex items-center justify-center min-h-screen">
+        <Loader2 className="w-8 h-8 animate-spin" />
+      </div>
+    );
+  }
 
   if (!hasAccess) {
     return (
@@ -173,13 +165,13 @@ export const CourseViewer = () => {
 
         <ScrollArea className="flex-1">
           <div className="p-4 space-y-4">
-            {course.modules.map((module, mIndex) => (
+            {course.modules?.map((module, mIndex) => (
               <div key={module.id}>
                 <h3 className="font-medium text-sm text-muted-foreground mb-2">
                   Módulo {mIndex + 1}: {module.title}
                 </h3>
                 <ul className="space-y-1">
-                  {module.lessons.map((lesson, lIndex) => (
+                  {module.lessons?.map((lesson, lIndex) => (
                     <li key={lesson.id}>
                       <button
                         onClick={() => handleLessonClick(mIndex, lIndex)}
@@ -208,7 +200,7 @@ export const CourseViewer = () => {
             <h1 className="text-2xl font-bold mb-6">{currentLesson.title}</h1>
 
             {/* Content based on type */}
-            {currentLesson.type === 'video' && (
+            {currentLesson.type === 'video' && currentLesson.content && (
               <div className="aspect-video bg-accent rounded-lg overflow-hidden mb-6">
                 <iframe
                   src={currentLesson.content}
@@ -219,13 +211,13 @@ export const CourseViewer = () => {
               </div>
             )}
 
-            {currentLesson.type === 'text' && (
+            {currentLesson.type === 'text' && currentLesson.content && (
               <div className="prose prose-lg max-w-none mb-6 bg-card p-6 rounded-lg">
                 <p className="whitespace-pre-wrap">{currentLesson.content}</p>
               </div>
             )}
 
-            {currentLesson.type === 'pdf' && (
+            {currentLesson.type === 'pdf' && currentLesson.content && (
               <div className="mb-6">
                 <iframe
                   src={currentLesson.content}
@@ -237,8 +229,16 @@ export const CourseViewer = () => {
 
             {/* Mark as complete */}
             {!isLessonCompleted(currentLesson.id) && (
-              <Button onClick={handleMarkComplete} className="gap-2">
-                <CheckCircle className="w-4 h-4" />
+              <Button 
+                onClick={handleMarkComplete} 
+                className="gap-2"
+                disabled={markComplete.isPending}
+              >
+                {markComplete.isPending ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <CheckCircle className="w-4 h-4" />
+                )}
                 Marcar como completada
               </Button>
             )}

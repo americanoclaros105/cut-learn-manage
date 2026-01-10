@@ -278,6 +278,7 @@ export type Database = {
       }
       profiles: {
         Row: {
+          avatar: string | null
           created_at: string
           enabled_from: string
           expires_at: string
@@ -289,6 +290,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          avatar?: string | null
           created_at?: string
           enabled_from?: string
           expires_at?: string
@@ -300,6 +302,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          avatar?: string | null
           created_at?: string
           enabled_from?: string
           expires_at?: string
@@ -379,19 +382,28 @@ export type Database = {
         Row: {
           assigned_at: string
           course_id: string
+          enabled_from: string | null
+          expires_at: string | null
           id: string
+          notes: string | null
           user_id: string
         }
         Insert: {
           assigned_at?: string
           course_id: string
+          enabled_from?: string | null
+          expires_at?: string | null
           id?: string
+          notes?: string | null
           user_id: string
         }
         Update: {
           assigned_at?: string
           course_id?: string
+          enabled_from?: string | null
+          expires_at?: string | null
           id?: string
+          notes?: string | null
           user_id?: string
         }
         Relationships: [

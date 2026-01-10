@@ -1,10 +1,21 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 
+export interface CourseAssignment {
+  id: string;
+  user_id: string;
+  course_id: string;
+  assigned_at: string;
+  enabled_from: string | null;
+  expires_at: string | null;
+  notes: string | null;
+}
+
 export interface StudentProfile {
   id: string;
   name: string;
   phone: string | null;
+  avatar: string | null;
   status: 'active' | 'inactive' | 'suspended';
   enabled_from: string;
   expires_at: string;
@@ -12,14 +23,7 @@ export interface StudentProfile {
   created_at: string;
   updated_at: string;
   email?: string;
-  assigned_courses?: string[];
-}
-
-export interface CourseAssignment {
-  id: string;
-  user_id: string;
-  course_id: string;
-  assigned_at: string;
+  assigned_courses?: CourseAssignment[];
 }
 
 export const useStudents = () => {
@@ -47,7 +51,7 @@ export const useStudents = () => {
       
       if (profilesError) throw profilesError;
 
-      // Get course assignments for each student
+      // Get course assignments for each student with all fields
       const { data: assignments, error: assignmentsError } = await supabase
         .from('user_course_assignments')
         .select('*')
@@ -58,9 +62,7 @@ export const useStudents = () => {
       // Combine data
       return profiles?.map(profile => ({
         ...profile,
-        assigned_courses: assignments
-          ?.filter(a => a.user_id === profile.id)
-          .map(a => a.course_id) || [],
+        assigned_courses: assignments?.filter(a => a.user_id === profile.id) || [],
       })) as StudentProfile[];
     },
   });
@@ -80,17 +82,53 @@ export const useStudent = (studentId: string) => {
 
       const { data: assignments, error: assignmentsError } = await supabase
         .from('user_course_assignments')
-        .select('course_id')
+        .select('*')
         .eq('user_id', studentId);
       
       if (assignmentsError) throw assignmentsError;
 
       return {
         ...profile,
-        assigned_courses: assignments?.map(a => a.course_id) || [],
+        assigned_courses: assignments || [],
       } as StudentProfile;
     },
     enabled: !!studentId,
+  });
+};
+
+export const useCreateStudent = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async (data: {
+      email: string;
+      password: string;
+      name: string;
+      phone?: string;
+      avatar?: string;
+      status?: 'active' | 'inactive' | 'suspended';
+      enabled_from?: string;
+      expires_at?: string;
+      notes?: string;
+      courses?: Array<{
+        course_id: string;
+        enabled_from?: string;
+        expires_at?: string;
+        notes?: string;
+      }>;
+    }) => {
+      const { data: response, error } = await supabase.functions.invoke('create-student', {
+        body: data,
+      });
+
+      if (error) throw error;
+      if (!response.success) throw new Error(response.error);
+      
+      return response;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['students'] });
+    },
   });
 };
 
@@ -102,7 +140,15 @@ export const useUpdateStudent = () => {
       // Update profile
       const { error: profileError } = await supabase
         .from('profiles')
-        .update(updates)
+        .update({
+          name: updates.name,
+          phone: updates.phone,
+          avatar: updates.avatar,
+          status: updates.status,
+          enabled_from: updates.enabled_from,
+          expires_at: updates.expires_at,
+          notes: updates.notes,
+        })
         .eq('id', id);
       
       if (profileError) throw profileError;
@@ -115,14 +161,17 @@ export const useUpdateStudent = () => {
           .delete()
           .eq('user_id', id);
         
-        // Add new assignments
+        // Add new assignments with all fields
         if (assigned_courses.length > 0) {
           const { error: assignError } = await supabase
             .from('user_course_assignments')
             .insert(
-              assigned_courses.map(courseId => ({
+              assigned_courses.map(course => ({
                 user_id: id,
-                course_id: courseId,
+                course_id: course.course_id,
+                enabled_from: course.enabled_from || new Date().toISOString(),
+                expires_at: course.expires_at || null,
+                notes: course.notes || null,
               }))
             );
           
@@ -139,23 +188,34 @@ export const useUpdateStudent = () => {
   });
 };
 
+export const useUpdateStudentPassword = () => {
+  return useMutation({
+    mutationFn: async ({ studentId, newPassword }: { studentId: string; newPassword: string }) => {
+      const { data: response, error } = await supabase.functions.invoke('update-student-password', {
+        body: { student_id: studentId, new_password: newPassword },
+      });
+
+      if (error) throw error;
+      if (!response.success) throw new Error(response.error);
+      
+      return response;
+    },
+  });
+};
+
 export const useDeleteStudent = () => {
   const queryClient = useQueryClient();
   
   return useMutation({
     mutationFn: async (studentId: string) => {
-      // This will cascade delete profile and assignments due to FK constraints
-      const { error } = await supabase.auth.admin.deleteUser(studentId);
+      const { data: response, error } = await supabase.functions.invoke('delete-student', {
+        body: { student_id: studentId },
+      });
+
+      if (error) throw error;
+      if (!response.success) throw new Error(response.error);
       
-      // If admin delete fails (no service role), just delete profile
-      if (error) {
-        const { error: profileError } = await supabase
-          .from('profiles')
-          .delete()
-          .eq('id', studentId);
-        
-        if (profileError) throw profileError;
-      }
+      return response;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['students'] });
@@ -167,10 +227,28 @@ export const useAssignCourse = () => {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: async ({ userId, courseId }: { userId: string; courseId: string }) => {
+    mutationFn: async ({ 
+      userId, 
+      courseId,
+      enabledFrom,
+      expiresAt,
+      notes,
+    }: { 
+      userId: string; 
+      courseId: string;
+      enabledFrom?: string;
+      expiresAt?: string;
+      notes?: string;
+    }) => {
       const { error } = await supabase
         .from('user_course_assignments')
-        .insert({ user_id: userId, course_id: courseId });
+        .insert({ 
+          user_id: userId, 
+          course_id: courseId,
+          enabled_from: enabledFrom || new Date().toISOString(),
+          expires_at: expiresAt || null,
+          notes: notes || null,
+        });
       
       if (error) throw error;
     },

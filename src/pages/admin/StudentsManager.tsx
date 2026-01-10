@@ -1,74 +1,187 @@
-import { useState } from 'react';
-import { useStudents, useUpdateStudent, StudentProfile } from '@/hooks/useStudents';
+import { useState, useMemo } from 'react';
+import { 
+  useStudents, 
+  useCreateStudent, 
+  useUpdateStudent, 
+  useUpdateStudentPassword,
+  useDeleteStudent,
+  StudentProfile,
+  CourseAssignment 
+} from '@/hooks/useStudents';
 import { useCourses } from '@/hooks/useCourses';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Badge } from '@/components/ui/badge';
-import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
-import { Edit, Search, Mail, Phone, Calendar, Loader2, Users } from 'lucide-react';
+import { Loader2, Plus, Users } from 'lucide-react';
+import { StudentCard } from '@/components/admin/students/StudentCard';
+import { StudentFilters } from '@/components/admin/students/StudentFilters';
+import { StudentForm, StudentFormData } from '@/components/admin/students/StudentForm';
+import { PasswordDialog } from '@/components/admin/students/PasswordDialog';
+import { DeleteDialog } from '@/components/admin/students/DeleteDialog';
 
 export const StudentsManager = () => {
   const { data: students = [], isLoading: loadingStudents } = useStudents();
   const { data: courses = [], isLoading: loadingCourses } = useCourses();
+  const createStudent = useCreateStudent();
   const updateStudent = useUpdateStudent();
+  const updatePassword = useUpdateStudentPassword();
+  const deleteStudent = useDeleteStudent();
   
-  const [editingUser, setEditingUser] = useState<StudentProfile | null>(null);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [filterStatus, setFilterStatus] = useState<string>('all');
+  // UI State
+  const [formOpen, setFormOpen] = useState(false);
+  const [formMode, setFormMode] = useState<'create' | 'edit'>('create');
+  const [selectedStudent, setSelectedStudent] = useState<StudentProfile | null>(null);
+  const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  
+  // Filters
+  const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [courseFilter, setCourseFilter] = useState('all');
+  const [sortBy, setSortBy] = useState('newest');
 
-  const handleSaveUser = async () => {
-    if (!editingUser) return;
+  // Filter and sort students
+  const filteredStudents = useMemo(() => {
+    let result = [...students];
 
+    // Search filter
+    if (search) {
+      const searchLower = search.toLowerCase();
+      result = result.filter(s => 
+        s.name.toLowerCase().includes(searchLower) ||
+        s.phone?.toLowerCase().includes(searchLower)
+      );
+    }
+
+    // Status filter
+    if (statusFilter !== 'all') {
+      result = result.filter(s => s.status === statusFilter);
+    }
+
+    // Course filter
+    if (courseFilter === 'none') {
+      result = result.filter(s => !s.assigned_courses || s.assigned_courses.length === 0);
+    } else if (courseFilter !== 'all') {
+      result = result.filter(s => 
+        s.assigned_courses?.some((a: CourseAssignment) => a.course_id === courseFilter)
+      );
+    }
+
+    // Sorting
+    result.sort((a, b) => {
+      switch (sortBy) {
+        case 'oldest':
+          return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+        case 'name-asc':
+          return a.name.localeCompare(b.name);
+        case 'name-desc':
+          return b.name.localeCompare(a.name);
+        case 'expires-soon':
+          return new Date(a.expires_at).getTime() - new Date(b.expires_at).getTime();
+        case 'newest':
+        default:
+          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+      }
+    });
+
+    return result;
+  }, [students, search, statusFilter, courseFilter, sortBy]);
+
+  const handleOpenCreate = () => {
+    setSelectedStudent(null);
+    setFormMode('create');
+    setFormOpen(true);
+  };
+
+  const handleOpenEdit = (student: StudentProfile) => {
+    setSelectedStudent(student);
+    setFormMode('edit');
+    setFormOpen(true);
+  };
+
+  const handleOpenPasswordDialog = (student: StudentProfile) => {
+    setSelectedStudent(student);
+    setPasswordDialogOpen(true);
+  };
+
+  const handleOpenDeleteDialog = (student: StudentProfile) => {
+    setSelectedStudent(student);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleSaveStudent = async (data: StudentFormData) => {
     try {
-      await updateStudent.mutateAsync({
-        id: editingUser.id,
-        name: editingUser.name,
-        phone: editingUser.phone,
-        status: editingUser.status,
-        enabled_from: editingUser.enabled_from,
-        expires_at: editingUser.expires_at,
-        notes: editingUser.notes,
-        assigned_courses: editingUser.assigned_courses,
-      });
-      setEditingUser(null);
-      setIsDialogOpen(false);
-      toast.success('Estudiante actualizado correctamente');
-    } catch (error) {
-      toast.error('Error al actualizar el estudiante');
+      if (formMode === 'create') {
+        await createStudent.mutateAsync({
+          email: data.email!,
+          password: data.password!,
+          name: data.name,
+          phone: data.phone || undefined,
+          avatar: data.avatar || undefined,
+          status: data.status,
+          enabled_from: data.enabled_from,
+          expires_at: data.expires_at,
+          notes: data.notes || undefined,
+          courses: data.courses,
+        });
+        toast.success('Estudiante creado correctamente');
+      } else if (selectedStudent) {
+        await updateStudent.mutateAsync({
+          id: selectedStudent.id,
+          name: data.name,
+          phone: data.phone || null,
+          avatar: data.avatar || null,
+          status: data.status,
+          enabled_from: data.enabled_from,
+          expires_at: data.expires_at,
+          notes: data.notes || null,
+          assigned_courses: data.courses as CourseAssignment[],
+        });
+        toast.success('Estudiante actualizado correctamente');
+      }
+      setFormOpen(false);
+      setSelectedStudent(null);
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
+      toast.error(formMode === 'create' 
+        ? `Error al crear el estudiante: ${errorMessage}` 
+        : `Error al actualizar el estudiante: ${errorMessage}`
+      );
     }
   };
 
-  const toggleCourse = (courseId: string) => {
-    if (!editingUser) return;
-    const assigned = editingUser.assigned_courses?.includes(courseId)
-      ? editingUser.assigned_courses.filter((id) => id !== courseId)
-      : [...(editingUser.assigned_courses || []), courseId];
-    setEditingUser({ ...editingUser, assigned_courses: assigned });
+  const handleUpdatePassword = async (password: string) => {
+    if (!selectedStudent) return;
+    
+    try {
+      await updatePassword.mutateAsync({
+        studentId: selectedStudent.id,
+        newPassword: password,
+      });
+      toast.success('Contraseña actualizada correctamente');
+      setPasswordDialogOpen(false);
+      setSelectedStudent(null);
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
+      toast.error(`Error al actualizar la contraseña: ${errorMessage}`);
+    }
   };
 
-  const filteredUsers = students.filter((user) => {
-    const matchesSearch =
-      user.name.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = filterStatus === 'all' || user.status === filterStatus;
-    return matchesSearch && matchesStatus;
-  });
-
-  const statusColors = {
-    active: 'bg-green-500/10 text-green-600',
-    inactive: 'bg-gray-500/10 text-gray-600',
-    suspended: 'bg-red-500/10 text-red-600',
+  const handleDeleteStudent = async () => {
+    if (!selectedStudent) return;
+    
+    try {
+      await deleteStudent.mutateAsync(selectedStudent.id);
+      toast.success('Estudiante eliminado correctamente');
+      setDeleteDialogOpen(false);
+      setSelectedStudent(null);
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
+      toast.error(`Error al eliminar el estudiante: ${errorMessage}`);
+    }
   };
 
-  const statusLabels = {
-    active: 'Activo',
-    inactive: 'Inactivo',
-    suspended: 'Suspendido',
-  };
+  const publishedCourses = courses.filter(c => c.status === 'published');
 
   if (loadingStudents || loadingCourses) {
     return (
@@ -80,220 +193,101 @@ export const StudentsManager = () => {
 
   return (
     <div className="p-8">
-      <div className="flex justify-between items-center mb-8">
+      {/* Header */}
+      <div className="flex justify-between items-start mb-8">
         <div>
           <h1 className="text-3xl font-bold text-foreground">Gestión de Estudiantes</h1>
-          <p className="text-muted-foreground">Administra los usuarios de la academia</p>
+          <p className="text-muted-foreground">
+            {students.length} estudiante{students.length !== 1 ? 's' : ''} registrado{students.length !== 1 ? 's' : ''}
+          </p>
         </div>
-        <p className="text-sm text-muted-foreground">
-          Los estudiantes se crean automáticamente al registrarse en Supabase Auth
-        </p>
+        <Button onClick={handleOpenCreate}>
+          <Plus className="w-4 h-4 mr-2" />
+          Nuevo Estudiante
+        </Button>
       </div>
 
       {/* Filters */}
-      <div className="flex gap-4 mb-6">
-        <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input
-            placeholder="Buscar por nombre..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10"
-          />
-        </div>
-        <Select value={filterStatus} onValueChange={setFilterStatus}>
-          <SelectTrigger className="w-40">
-            <SelectValue placeholder="Estado" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todos</SelectItem>
-            <SelectItem value="active">Activos</SelectItem>
-            <SelectItem value="inactive">Inactivos</SelectItem>
-            <SelectItem value="suspended">Suspendidos</SelectItem>
-          </SelectContent>
-        </Select>
+      <div className="mb-6">
+        <StudentFilters
+          search={search}
+          onSearchChange={setSearch}
+          statusFilter={statusFilter}
+          onStatusFilterChange={setStatusFilter}
+          courseFilter={courseFilter}
+          onCourseFilterChange={setCourseFilter}
+          sortBy={sortBy}
+          onSortByChange={setSortBy}
+          courses={publishedCourses}
+        />
       </div>
 
-      {/* Users List */}
+      {/* Students List */}
       <div className="grid gap-4">
-        {filteredUsers.length === 0 ? (
+        {filteredStudents.length === 0 ? (
           <Card className="border-dashed">
             <CardContent className="p-12 text-center">
               <Users className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-              <p className="text-muted-foreground">No se encontraron estudiantes</p>
+              <h3 className="font-medium mb-2">
+                {students.length === 0 
+                  ? 'No hay estudiantes registrados' 
+                  : 'No se encontraron estudiantes'}
+              </h3>
+              <p className="text-sm text-muted-foreground mb-4">
+                {students.length === 0 
+                  ? 'Crea tu primer estudiante para comenzar' 
+                  : 'Intenta ajustar los filtros de búsqueda'}
+              </p>
+              {students.length === 0 && (
+                <Button onClick={handleOpenCreate}>
+                  <Plus className="w-4 h-4 mr-2" />
+                  Crear Estudiante
+                </Button>
+              )}
             </CardContent>
           </Card>
         ) : (
-          filteredUsers.map((user) => (
-            <Card key={user.id} className="border-0 shadow-md">
-              <CardContent className="p-6">
-                <div className="flex justify-between items-start">
-                  <div className="flex gap-4">
-                    <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
-                      <span className="text-primary font-bold text-lg">
-                        {user.name.charAt(0).toUpperCase()}
-                      </span>
-                    </div>
-                    <div>
-                      <h3 className="font-semibold text-lg">{user.name}</h3>
-                      <div className="flex items-center gap-4 text-sm text-muted-foreground mt-1">
-                        {user.phone && (
-                          <span className="flex items-center gap-1">
-                            <Phone className="w-4 h-4" /> {user.phone}
-                          </span>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-4 mt-2">
-                        <Badge className={statusColors[user.status]}>
-                          {statusLabels[user.status]}
-                        </Badge>
-                        <span className="text-xs text-muted-foreground flex items-center gap-1">
-                          <Calendar className="w-3 h-3" />
-                          Expira: {new Date(user.expires_at).toLocaleDateString()}
-                        </span>
-                      </div>
-                      {user.assigned_courses && user.assigned_courses.length > 0 && (
-                        <div className="mt-3 flex flex-wrap gap-2">
-                          {user.assigned_courses.map((courseId) => {
-                            const course = courses.find((c) => c.id === courseId);
-                            return course ? (
-                              <Badge key={courseId} variant="outline" className="text-xs">
-                                {course.title}
-                              </Badge>
-                            ) : null;
-                          })}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                  <div className="flex gap-2">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => {
-                        setEditingUser(user);
-                        setIsDialogOpen(true);
-                      }}
-                    >
-                      <Edit className="w-4 h-4" />
-                    </Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+          filteredStudents.map((student) => (
+            <StudentCard
+              key={student.id}
+              student={student}
+              courses={publishedCourses}
+              onEdit={handleOpenEdit}
+              onChangePassword={handleOpenPasswordDialog}
+              onDelete={handleOpenDeleteDialog}
+            />
           ))
         )}
       </div>
 
-      {/* Edit Dialog */}
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Editar Estudiante</DialogTitle>
-          </DialogHeader>
-          {editingUser && (
-            <div className="space-y-6">
-              <div className="grid md:grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm font-medium">Nombre Completo</label>
-                  <Input
-                    value={editingUser.name}
-                    onChange={(e) => setEditingUser({ ...editingUser, name: e.target.value })}
-                  />
-                </div>
-                <div>
-                  <label className="text-sm font-medium">Teléfono</label>
-                  <Input
-                    value={editingUser.phone || ''}
-                    onChange={(e) => setEditingUser({ ...editingUser, phone: e.target.value })}
-                  />
-                </div>
-              </div>
+      {/* Create/Edit Form */}
+      <StudentForm
+        open={formOpen}
+        onOpenChange={setFormOpen}
+        student={selectedStudent}
+        courses={publishedCourses}
+        onSave={handleSaveStudent}
+        isLoading={createStudent.isPending || updateStudent.isPending}
+        mode={formMode}
+      />
 
-              <div className="grid md:grid-cols-3 gap-4">
-                <div>
-                  <label className="text-sm font-medium">Estado</label>
-                  <Select
-                    value={editingUser.status}
-                    onValueChange={(value: 'active' | 'inactive' | 'suspended') =>
-                      setEditingUser({ ...editingUser, status: value })
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="active">Activo</SelectItem>
-                      <SelectItem value="inactive">Inactivo</SelectItem>
-                      <SelectItem value="suspended">Suspendido</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <label className="text-sm font-medium">Habilitado desde</label>
-                  <Input
-                    type="date"
-                    value={editingUser.enabled_from.split('T')[0]}
-                    onChange={(e) =>
-                      setEditingUser({ ...editingUser, enabled_from: e.target.value })
-                    }
-                  />
-                </div>
-                <div>
-                  <label className="text-sm font-medium">Expira el</label>
-                  <Input
-                    type="date"
-                    value={editingUser.expires_at.split('T')[0]}
-                    onChange={(e) =>
-                      setEditingUser({ ...editingUser, expires_at: e.target.value })
-                    }
-                  />
-                </div>
-              </div>
+      {/* Password Dialog */}
+      <PasswordDialog
+        open={passwordDialogOpen}
+        onOpenChange={setPasswordDialogOpen}
+        studentName={selectedStudent?.name || ''}
+        onSave={handleUpdatePassword}
+        isLoading={updatePassword.isPending}
+      />
 
-              {/* Course Assignment */}
-              <div className="border-t pt-4">
-                <label className="text-sm font-medium mb-3 block">Cursos Asignados</label>
-                <div className="grid sm:grid-cols-2 gap-3">
-                  {courses
-                    .filter((c) => c.status === 'published')
-                    .map((course) => (
-                      <div
-                        key={course.id}
-                        className="flex items-center gap-3 p-3 rounded-lg border hover:bg-secondary/50 cursor-pointer"
-                        onClick={() => toggleCourse(course.id)}
-                      >
-                        <Checkbox
-                          checked={editingUser.assigned_courses?.includes(course.id) || false}
-                          onCheckedChange={() => toggleCourse(course.id)}
-                        />
-                        <div className="flex-1">
-                          <p className="font-medium text-sm">{course.title}</p>
-                          <p className="text-xs text-muted-foreground">{course.duration}</p>
-                        </div>
-                      </div>
-                    ))}
-                </div>
-              </div>
-
-              <div className="flex justify-end gap-2 pt-4 border-t">
-                <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
-                  Cancelar
-                </Button>
-                <Button 
-                  onClick={handleSaveUser}
-                  disabled={updateStudent.isPending}
-                >
-                  {updateStudent.isPending && (
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  )}
-                  Guardar
-                </Button>
-              </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
+      {/* Delete Confirmation */}
+      <DeleteDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        studentName={selectedStudent?.name || ''}
+        onConfirm={handleDeleteStudent}
+        isLoading={deleteStudent.isPending}
+      />
     </div>
   );
 };

@@ -1,1 +1,10 @@
 project_id = "hiqxmewijukopkwbjeqt"
+
+[functions.create-student]
+verify_jwt = false
+
+[functions.update-student-password]
+verify_jwt = false
+
+[functions.delete-student]
+verify_jwt = false

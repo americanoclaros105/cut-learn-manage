@@ -1,6 +1,12 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 
+export interface CourseTheme {
+  primary: string;
+  accent: string;
+  background: string;
+}
+
 export interface Course {
   id: string;
   title: string;
@@ -12,6 +18,7 @@ export interface Course {
   status: 'published' | 'draft' | 'archived';
   category: string | null;
   tags: string[];
+  theme_colors?: CourseTheme;
   created_at: string;
   updated_at: string;
   modules?: Module[];
@@ -21,9 +28,19 @@ export interface Module {
   id: string;
   course_id: string;
   title: string;
+  description?: string;
   order_num: number;
   created_at: string;
   lessons?: Lesson[];
+}
+
+export interface Attachment {
+  id: string;
+  name: string;
+  url: string;
+  path?: string;
+  size: number;
+  type: string;
 }
 
 export interface Lesson {
@@ -35,6 +52,8 @@ export interface Lesson {
   duration: string | null;
   is_required: boolean;
   order_num: number;
+  thumbnail?: string;
+  attachments?: Attachment[];
   created_at: string;
 }
 
@@ -53,7 +72,7 @@ export const useCourses = (options?: { status?: 'published' | 'draft' | 'archive
       
       const { data, error } = await query;
       if (error) throw error;
-      return data as Course[];
+      return data as unknown as Course[];
     },
   });
 };
@@ -94,7 +113,7 @@ export const useCourseWithModules = (courseId: string) => {
         })
       );
 
-      return { ...course, modules: modulesWithLessons } as Course;
+      return { ...course, modules: modulesWithLessons } as unknown as Course;
     },
     enabled: !!courseId,
   });
@@ -127,7 +146,7 @@ export const useUpdateCourse = () => {
     mutationFn: async ({ id, ...updates }: Partial<Course> & { id: string }) => {
       const { data, error } = await supabase
         .from('courses')
-        .update(updates)
+        .update(updates as any)
         .eq('id', id)
         .select()
         .single();
@@ -249,7 +268,7 @@ export const useUpdateLesson = () => {
     mutationFn: async ({ id, courseId, ...updates }: Partial<Lesson> & { id: string; courseId: string }) => {
       const { data, error } = await supabase
         .from('lessons')
-        .update(updates)
+        .update(updates as any)
         .eq('id', id)
         .select()
         .single();

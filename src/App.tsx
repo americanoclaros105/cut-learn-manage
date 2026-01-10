@@ -19,6 +19,7 @@ import { StudentLayout } from "./layouts/StudentLayout";
 import { AdminDashboard } from "./pages/admin/AdminDashboard";
 import { LandingEditor } from "./pages/admin/LandingEditor";
 import { CoursesManager } from "./pages/admin/CoursesManager";
+import { CourseEditor } from "./pages/admin/CourseEditor";
 import { StudentsManager } from "./pages/admin/StudentsManager";
 
 // Student Pages
@@ -51,6 +52,8 @@ const App = () => (
               <Route index element={<AdminDashboard />} />
               <Route path="landing" element={<LandingEditor />} />
               <Route path="cursos" element={<CoursesManager />} />
+              <Route path="cursos/nuevo" element={<CourseEditor />} />
+              <Route path="cursos/:courseId" element={<CourseEditor />} />
               <Route path="estudiantes" element={<StudentsManager />} />
             </Route>
 

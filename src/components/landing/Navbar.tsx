@@ -43,7 +43,7 @@ export const Navbar = () => {
         <div className="flex items-center justify-between h-16 md:h-20">
           {/* Logo */}
           <a href="#hero" className="text-2xl md:text-3xl font-bold text-primary-foreground">
-            BARBER<span className="text-primary">SHOP</span>
+            CLAROS <span className="text-primary">STUDIO</span>
           </a>
 
           {/* Desktop Navigation */}

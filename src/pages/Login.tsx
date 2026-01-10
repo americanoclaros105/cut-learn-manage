@@ -49,7 +49,7 @@ const Login = () => {
         <Card className="border-0 shadow-2xl">
           <CardHeader className="text-center pb-2">
             <CardTitle className="text-2xl">
-              BARBER<span className="text-primary">SHOP</span>
+              CLAROS <span className="text-primary">STUDIO</span>
             </CardTitle>
             <p className="text-muted-foreground">Accede a tu cuenta</p>
           </CardHeader>

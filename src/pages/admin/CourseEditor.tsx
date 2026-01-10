@@ -111,8 +111,17 @@ export const CourseEditor = () => {
     }
 
     try {
+      // Extract only valid fields for the courses table (exclude joined data and auto-managed fields)
+      const { 
+        modules,      // Exclude - comes from join with modules table
+        created_at,   // Exclude - should not be updated
+        updated_at,   // Exclude - updated by database trigger
+        id,           // Exclude for create, handle separately for update
+        ...validCourseFields 
+      } = course as any;
+
       const courseData = {
-        ...course,
+        ...validCourseFields,
         theme_colors: theme,
       };
 
@@ -122,10 +131,10 @@ export const CourseEditor = () => {
       } else {
         const newCourse = await createCourse.mutateAsync(courseData as any);
         toast.success('Curso creado');
-        // Navigate to edit mode for the new course
         navigate(`/admin/cursos/${newCourse.id}`);
       }
     } catch (error) {
+      console.error('Error saving course:', error);
       toast.error('Error al guardar el curso');
     }
   };

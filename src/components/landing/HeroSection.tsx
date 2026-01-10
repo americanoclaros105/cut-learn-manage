@@ -12,7 +12,7 @@ export const HeroSection = ({ content, whatsapp, whatsappMessage }: HeroSectionP
   const handleWhatsAppClick = () => {
     const message = encodeURIComponent(whatsappMessage);
     const phone = whatsapp.replace(/\D/g, "");
-    window.open(`https://wa.me/${phone}?text=${message}`, "_blank");
+    window.open(`https://api.whatsapp.com/send?phone=${phone}?text=${message}`, "_blank");
   };
 
   return (

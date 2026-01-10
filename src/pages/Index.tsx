@@ -10,6 +10,7 @@ import { Footer } from '@/components/landing/Footer';
 import { FloatingWhatsApp } from '@/components/FloatingWhatsApp';
 import { useLandingContent, useServices, useGallery, useTestimonials } from '@/hooks/useLandingContent';
 import { useCourses } from '@/hooks/useCourses';
+import { useDynamicTheme } from '@/hooks/useDynamicTheme';
 import { Loader2 } from 'lucide-react';
 
 // Default content for when database is empty
@@ -55,6 +56,9 @@ const Index = () => {
   const { data: courses = [], isLoading: loadingCourses } = useCourses({ status: 'published' });
 
   const isLoading = loadingContent || loadingServices || loadingGallery || loadingTestimonials || loadingCourses;
+
+  // Apply dynamic theme colors from landing content
+  useDynamicTheme(landingContent?.theme_colors);
 
   if (isLoading) {
     return (

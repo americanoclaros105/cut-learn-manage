@@ -96,7 +96,7 @@ export const useLandingContent = () => {
         .single();
       
       if (error && error.code !== 'PGRST116') throw error;
-      return data as LandingContent | null;
+      return data as unknown as LandingContent | null;
     },
   });
 };
@@ -173,16 +173,19 @@ export const useUpdateLandingContent = () => {
         .limit(1)
         .single();
       
+      // Cast to any to avoid Json type conflicts
+      const contentToSave = content as any;
+      
       if (existing) {
         const { error } = await supabase
           .from('landing_content')
-          .update(content)
+          .update(contentToSave)
           .eq('id', existing.id);
         if (error) throw error;
       } else {
         const { error } = await supabase
           .from('landing_content')
-          .insert(content);
+          .insert([contentToSave]);
         if (error) throw error;
       }
     },

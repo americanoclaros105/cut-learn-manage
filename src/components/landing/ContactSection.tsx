@@ -26,7 +26,7 @@ export const ContactSection = ({ content }: ContactSectionProps) => {
   const handleWhatsAppClick = () => {
     const message = encodeURIComponent(content.whatsappMessage);
     const phone = content.whatsapp.replace(/\D/g, '');
-    window.open(`https://wa.me/${phone}?text=${message}`, '_blank');
+    window.open(`https://api.whatsapp.com/send?phone=+${phone}&text=${message}`, '_blank');
   };
 
   return (

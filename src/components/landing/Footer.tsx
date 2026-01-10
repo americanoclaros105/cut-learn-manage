@@ -13,7 +13,7 @@ export const Footer = ({ content }: FooterProps) => {
           {/* Logo & Description */}
           <div>
             <h3 className="text-2xl font-bold mb-4">
-              BARBER<span className="text-primary">SHOP</span>
+              CLAROS <span className="text-primary">STUDIO</span>
             </h3>
             <p className="text-background/70">
               El arte del estilo masculino. Tradición y modernidad en cada corte.
@@ -86,7 +86,7 @@ export const Footer = ({ content }: FooterProps) => {
         </div>
 
         <div className="border-t border-background/20 pt-8 text-center text-background/50 text-sm">
-          <p>&copy; {new Date().getFullYear()} Barbershop. Todos los derechos reservados.</p>
+          <p>&copy; {new Date().getFullYear()} Claros Studio. Todos los derechos reservados.</p>
         </div>
       </div>
     </footer>

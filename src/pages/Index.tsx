@@ -35,7 +35,7 @@ const defaultContent = {
     phone: '+1 234 567 8900',
     whatsapp: '+1234567890',
     whatsappMessage: 'Hola! Me gustaría reservar una cita.',
-    email: 'info@barbershop.com',
+    email: 'info@clarosstudio.com',
     address: 'Calle Principal 123, Ciudad',
     hours: 'Lunes a Sábado: 9:00 AM - 8:00 PM',
   },

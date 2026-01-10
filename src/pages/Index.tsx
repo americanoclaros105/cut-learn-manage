@@ -7,6 +7,7 @@ import { GallerySection } from '@/components/landing/GallerySection';
 import { TestimonialsSection } from '@/components/landing/TestimonialsSection';
 import { ContactSection } from '@/components/landing/ContactSection';
 import { Footer } from '@/components/landing/Footer';
+import { FloatingWhatsApp } from '@/components/FloatingWhatsApp';
 import { useLandingContent, useServices, useGallery, useTestimonials } from '@/hooks/useLandingContent';
 import { useCourses } from '@/hooks/useCourses';
 import { Loader2 } from 'lucide-react';
@@ -168,6 +169,10 @@ const Index = () => {
       <TestimonialsSection testimonials={testimonialsForComponent} />
       <ContactSection content={contactContent} />
       <Footer content={footerContent} />
+      <FloatingWhatsApp 
+        phone={contactContent.whatsapp} 
+        message={contactContent.whatsappMessage} 
+      />
     </div>
   );
 };

@@ -11,7 +11,7 @@ const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const { login, isSuperadmin } = useAuth();
+  const { login, user } = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -22,16 +22,18 @@ const Login = () => {
 
     if (result.success) {
       toast.success('¡Bienvenido!');
-      // Re-check role after login
-      const storedAuth = localStorage.getItem('barber_auth');
-      const user = storedAuth ? JSON.parse(storedAuth) : null;
-      navigate(user?.role === 'superadmin' ? '/admin' : '/estudiante');
     } else {
       toast.error(result.error);
     }
 
     setIsLoading(false);
   };
+
+  // Redirect if already logged in
+  if (user) {
+    navigate(user.role === 'superadmin' ? '/admin' : '/estudiante');
+    return null;
+  }
 
   return (
     <div className="min-h-screen bg-accent flex items-center justify-center p-4">

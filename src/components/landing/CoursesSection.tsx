@@ -4,11 +4,13 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Clock, BookOpen, ArrowRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { openWhatsApp } from '@/lib/whatsapp';
 
 interface CoursesSectionProps {
   title: string;
   subtitle: string;
   courses: Course[];
+  whatsapp: string;
 }
 
 const levelColors = {
@@ -23,7 +25,7 @@ const levelLabels = {
   advanced: 'Avanzado',
 };
 
-export const CoursesSection = ({ title, subtitle, courses }: CoursesSectionProps) => {
+export const CoursesSection = ({ title, subtitle, courses, whatsapp }: CoursesSectionProps) => {
   const navigate = useNavigate();
   const publishedCourses = courses.filter((c) => c.status === 'published').slice(0, 3);
 
@@ -69,6 +71,13 @@ export const CoursesSection = ({ title, subtitle, courses }: CoursesSectionProps
                 {course.price > 0 && (
                   <div className="mt-4 text-2xl font-bold text-primary">${course.price}</div>
                 )}
+                <Button
+                  onClick={() => openWhatsApp(whatsapp, course.title, 'curso')}
+                  className="w-full mt-4 bg-green-500 hover:bg-green-600 text-white gap-2"
+                >
+                  <i className="fab fa-whatsapp text-lg" />
+                  Inscribirme
+                </Button>
               </CardContent>
             </Card>
           ))}

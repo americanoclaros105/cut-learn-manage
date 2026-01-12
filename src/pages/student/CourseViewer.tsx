@@ -4,51 +4,12 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useCourseWithModules, Lesson } from '@/hooks/useCourses';
 import { useCourseProgress, useMarkLessonComplete, useUserAssignedCourses } from '@/hooks/useProgress';
 import { Button } from '@/components/ui/button';
-import { Progress } from '@/components/ui/progress';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { toast } from 'sonner';
-import {
-  ArrowLeft,
-  ChevronRight,
-  ChevronLeft,
-  CheckCircle,
-  PlayCircle,
-  FileText,
-  File,
-  Lock,
-  Loader2,
-  Download,
-  ExternalLink,
-  ImageIcon,
-  Link as LinkIcon,
-} from 'lucide-react';
-
-// Check if URL is from Supabase storage
-const isStorageUrl = (url: string): boolean => {
-  return url?.includes('supabase') && url?.includes('storage');
-};
-
-// Check if URL is a YouTube/Vimeo embed
-const isExternalVideoUrl = (url: string): boolean => {
-  return url?.includes('youtube.com') || url?.includes('youtu.be') || url?.includes('vimeo.com');
-};
-
-// Convert YouTube URL to embed URL
-const getEmbedUrl = (url: string): string => {
-  if (url.includes('youtube.com/watch?v=')) {
-    const videoId = url.split('v=')[1]?.split('&')[0];
-    return `https://www.youtube.com/embed/${videoId}`;
-  }
-  if (url.includes('youtu.be/')) {
-    const videoId = url.split('youtu.be/')[1]?.split('?')[0];
-    return `https://www.youtube.com/embed/${videoId}`;
-  }
-  if (url.includes('vimeo.com/')) {
-    const videoId = url.split('vimeo.com/')[1]?.split('?')[0];
-    return `https://player.vimeo.com/video/${videoId}`;
-  }
-  return url;
-};
+import { Lock, Loader2, ArrowLeft } from 'lucide-react';
+import { CourseHeader } from '@/components/student/course/CourseHeader';
+import { CourseSidebar } from '@/components/student/course/CourseSidebar';
+import { LessonContent } from '@/components/student/course/LessonContent';
+import { MobileCourseSidebar } from '@/components/student/course/MobileCourseSidebar';
 
 export const CourseViewer = () => {
   const { courseId } = useParams();
@@ -63,6 +24,7 @@ export const CourseViewer = () => {
   const [currentLesson, setCurrentLesson] = useState<Lesson | null>(null);
   const [currentModuleIndex, setCurrentModuleIndex] = useState(0);
   const [currentLessonIndex, setCurrentLessonIndex] = useState(0);
+  const [showHeader, setShowHeader] = useState(true);
 
   const hasAccess = courseId ? assignedCourses.includes(courseId) : false;
   const completedLessons = progressData.map((p) => p.lesson_id);
@@ -86,9 +48,19 @@ export const CourseViewer = () => {
 
   useEffect(() => {
     if (course && course.modules && course.modules.length > 0 && course.modules[0].lessons?.length > 0) {
-      setCurrentLesson(course.modules[0].lessons[0]);
+      // Find first incomplete lesson or default to first
+      const allLessons = getAllLessons();
+      const firstIncomplete = allLessons.find((l) => !completedLessons.includes(l.id));
+      
+      if (firstIncomplete) {
+        setCurrentModuleIndex(firstIncomplete.moduleIndex);
+        setCurrentLessonIndex(firstIncomplete.lessonIndex);
+        setCurrentLesson(firstIncomplete);
+      } else {
+        setCurrentLesson(course.modules[0].lessons[0]);
+      }
     }
-  }, [course]);
+  }, [course, completedLessons.length]);
 
   const getAllLessons = () => {
     if (!course || !course.modules) return [];
@@ -112,7 +84,9 @@ export const CourseViewer = () => {
 
     try {
       await markComplete.mutateAsync({ lessonId: currentLesson.id, courseId });
-      toast.success('Lección completada');
+      toast.success('¡Lección completada!', {
+        description: 'Tu progreso ha sido guardado',
+      });
 
       // Auto-advance to next lesson
       const allLessons = getAllLessons();
@@ -152,313 +126,119 @@ export const CourseViewer = () => {
     return totalLessons > 0 ? Math.round((completedLessons.length / totalLessons) * 100) : 0;
   };
 
-  const getLessonIcon = (lesson: Lesson) => {
-    if (isLessonCompleted(lesson.id)) {
-      return <CheckCircle className="w-4 h-4 text-green-500" />;
-    }
-    switch (lesson.type) {
-      case 'video':
-        return <PlayCircle className="w-4 h-4" />;
-      case 'pdf':
-        return <FileText className="w-4 h-4" />;
-      case 'image':
-        return <ImageIcon className="w-4 h-4" />;
-      case 'link':
-        return <LinkIcon className="w-4 h-4" />;
-      default:
-        return <File className="w-4 h-4" />;
-    }
+  const getTotalLessons = () => {
+    if (!course || !course.modules) return 0;
+    return course.modules.reduce((a, m) => a + (m.lessons?.length || 0), 0);
   };
 
-  const renderLessonContent = () => {
-    if (!currentLesson?.content) {
-      return (
-        <div className="bg-muted rounded-lg p-12 text-center">
-          <File className="w-16 h-16 mx-auto text-muted-foreground mb-4" />
-          <p className="text-muted-foreground">Esta lección no tiene contenido</p>
-        </div>
-      );
-    }
-
-    switch (currentLesson.type) {
-      case 'video':
-        if (isExternalVideoUrl(currentLesson.content)) {
-          // YouTube/Vimeo embed
-          return (
-            <div className="aspect-video bg-black rounded-lg overflow-hidden mb-6">
-              <iframe
-                src={getEmbedUrl(currentLesson.content)}
-                className="w-full h-full"
-                allowFullScreen
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                title={currentLesson.title}
-              />
-            </div>
-          );
-        } else {
-          // Direct video (from storage)
-          return (
-            <div className="aspect-video bg-black rounded-lg overflow-hidden mb-6">
-              <video
-                src={currentLesson.content}
-                className="w-full h-full"
-                controls
-                controlsList="nodownload"
-                preload="metadata"
-              >
-                Tu navegador no soporta el elemento de video.
-              </video>
-            </div>
-          );
-        }
-
-      case 'pdf':
-        return (
-          <div className="mb-6">
-            <div className="bg-muted rounded-lg p-4 mb-4 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <FileText className="w-8 h-8 text-red-500" />
-                <div>
-                  <p className="font-medium">Documento PDF</p>
-                  <p className="text-sm text-muted-foreground">{currentLesson.title}</p>
-                </div>
-              </div>
-              <Button asChild variant="outline">
-                <a href={currentLesson.content} target="_blank" rel="noopener noreferrer">
-                  <ExternalLink className="w-4 h-4 mr-2" />
-                  Abrir en nueva pestaña
-                </a>
-              </Button>
-            </div>
-            <iframe
-              src={currentLesson.content}
-              className="w-full h-[600px] rounded-lg border"
-              title={currentLesson.title}
-            />
-          </div>
-        );
-
-      case 'image':
-        return (
-          <div className="mb-6">
-            <img
-              src={currentLesson.content}
-              alt={currentLesson.title}
-              className="w-full max-w-3xl mx-auto rounded-lg shadow-lg"
-            />
-          </div>
-        );
-
-      case 'text':
-        return (
-          <div className="prose prose-lg max-w-none mb-6 bg-card p-6 rounded-lg border">
-            <div className="whitespace-pre-wrap">{currentLesson.content}</div>
-          </div>
-        );
-
-      case 'link':
-        return (
-          <div className="mb-6">
-            <div className="bg-muted rounded-lg p-6 text-center">
-              <LinkIcon className="w-12 h-12 mx-auto text-primary mb-4" />
-              <p className="text-muted-foreground mb-4">Esta lección contiene un enlace externo</p>
-              <Button asChild>
-                <a href={currentLesson.content} target="_blank" rel="noopener noreferrer">
-                  <ExternalLink className="w-4 h-4 mr-2" />
-                  Abrir enlace
-                </a>
-              </Button>
-            </div>
-          </div>
-        );
-
-      default:
-        return (
-          <div className="prose prose-lg max-w-none mb-6 bg-card p-6 rounded-lg">
-            <p className="whitespace-pre-wrap">{currentLesson.content}</p>
-          </div>
-        );
-    }
+  const getCurrentPosition = () => {
+    const allLessons = getAllLessons();
+    return allLessons.findIndex((l) => l.id === currentLesson?.id) + 1;
   };
 
-  // Render attachments if any
-  const renderAttachments = () => {
-    const attachments = (currentLesson as any)?.attachments;
-    if (!attachments || attachments.length === 0) return null;
-
-    return (
-      <div className="mt-6 p-4 bg-muted rounded-lg">
-        <h4 className="font-medium mb-3 flex items-center gap-2">
-          <Download className="w-4 h-4" />
-          Archivos Adjuntos
-        </h4>
-        <div className="space-y-2">
-          {attachments.map((attachment: any, index: number) => (
-            <a
-              key={index}
-              href={attachment.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-3 p-3 bg-background rounded-lg hover:bg-accent transition-colors"
-            >
-              <FileText className="w-5 h-5 text-primary" />
-              <div className="flex-1">
-                <p className="font-medium text-sm">{attachment.name}</p>
-                <p className="text-xs text-muted-foreground">
-                  {(attachment.size / 1024).toFixed(1)} KB
-                </p>
-              </div>
-              <Download className="w-4 h-4 text-muted-foreground" />
-            </a>
-          ))}
-        </div>
-      </div>
-    );
-  };
-
+  // Loading state
   if (loadingCourse || loadingAssigned || loadingProgress) {
     return (
-      <div className="p-8 flex items-center justify-center min-h-screen">
-        <Loader2 className="w-8 h-8 animate-spin" />
+      <div className="flex items-center justify-center min-h-screen bg-background">
+        <div className="text-center">
+          <Loader2 className="w-12 h-12 animate-spin text-primary mx-auto mb-4" />
+          <p className="text-muted-foreground">Cargando curso...</p>
+        </div>
       </div>
     );
   }
 
+  // Access denied
   if (!hasAccess) {
     return (
-      <div className="p-8 flex flex-col items-center justify-center min-h-[60vh]">
-        <Lock className="w-16 h-16 text-muted-foreground mb-4" />
-        <h2 className="text-2xl font-bold mb-2">Acceso Restringido</h2>
-        <p className="text-muted-foreground mb-6">No tienes acceso a este curso.</p>
-        <Button onClick={() => navigate('/estudiante')}>Volver a Mis Cursos</Button>
+      <div className="flex flex-col items-center justify-center min-h-screen bg-background p-8">
+        <div className="w-20 h-20 rounded-full bg-destructive/10 flex items-center justify-center mb-6">
+          <Lock className="w-10 h-10 text-destructive" />
+        </div>
+        <h2 className="text-2xl font-bold mb-2 text-center">Acceso Restringido</h2>
+        <p className="text-muted-foreground text-center mb-6 max-w-md">
+          No tienes acceso a este curso. Contacta al administrador para solicitar acceso.
+        </p>
+        <Button onClick={() => navigate('/estudiante')} size="lg">
+          <ArrowLeft className="w-4 h-4 mr-2" />
+          Volver a Mis Cursos
+        </Button>
       </div>
     );
   }
 
+  // Course not found
   if (!course || !currentLesson) {
     return (
-      <div className="p-8 flex items-center justify-center">
-        <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
+      <div className="flex items-center justify-center min-h-screen bg-background">
+        <div className="text-center">
+          <Loader2 className="w-12 h-12 animate-spin text-primary mx-auto mb-4" />
+          <p className="text-muted-foreground">Preparando contenido...</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="flex h-screen bg-background">
-      {/* Sidebar - Course Structure */}
-      <aside className="w-80 bg-card border-r flex flex-col">
-        <div className="p-4 border-b">
-          <Button variant="ghost" size="sm" onClick={() => navigate('/estudiante')} className="mb-3">
-            <ArrowLeft className="w-4 h-4 mr-2" /> Volver
-          </Button>
-          <h2 className="font-semibold text-lg line-clamp-2">{course.title}</h2>
-          <div className="mt-3">
-            <div className="flex justify-between text-sm mb-1">
-              <span className="text-muted-foreground">Progreso</span>
-              <span className="font-medium">{getProgressPercentage()}%</span>
-            </div>
-            <Progress value={getProgressPercentage()} className="h-2" />
-          </div>
+    <div className="flex flex-col h-screen bg-background overflow-hidden">
+      {/* Mobile Header with Sidebar Toggle */}
+      <div className="lg:hidden flex items-center justify-between p-3 border-b bg-card">
+        <MobileCourseSidebar
+          modules={course.modules || []}
+          currentLesson={currentLesson}
+          completedLessons={completedLessons}
+          onLessonClick={handleLessonClick}
+        />
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => setShowHeader(!showHeader)}
+          className="text-xs"
+        >
+          {showHeader ? 'Ocultar info' : 'Ver info'}
+        </Button>
+      </div>
+
+      {/* Course Header - Collapsible on mobile */}
+      <div className={`transition-all duration-300 ${!showHeader && 'hidden lg:block'}`}>
+        <CourseHeader
+          course={course}
+          progressPercentage={getProgressPercentage()}
+          totalLessons={getTotalLessons()}
+          completedCount={completedLessons.length}
+        />
+      </div>
+
+      {/* Main Content Area */}
+      <div className="flex-1 flex overflow-hidden">
+        {/* Desktop Sidebar */}
+        <div className="hidden lg:flex">
+          <CourseSidebar
+            modules={course.modules || []}
+            currentLesson={currentLesson}
+            completedLessons={completedLessons}
+            onLessonClick={handleLessonClick}
+          />
         </div>
 
-        <ScrollArea className="flex-1">
-          <div className="p-4 space-y-4">
-            {course.modules?.map((module, mIndex) => (
-              <div key={module.id}>
-                <h3 className="font-medium text-sm text-muted-foreground mb-2">
-                  Módulo {mIndex + 1}: {module.title}
-                </h3>
-                <ul className="space-y-1">
-                  {module.lessons?.map((lesson, lIndex) => (
-                    <li key={lesson.id}>
-                      <button
-                        onClick={() => handleLessonClick(mIndex, lIndex)}
-                        className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left text-sm transition-colors ${
-                          currentLesson?.id === lesson.id
-                            ? 'bg-primary text-primary-foreground'
-                            : 'hover:bg-secondary'
-                        }`}
-                      >
-                        {getLessonIcon(lesson)}
-                        <span className="flex-1 line-clamp-1">{lesson.title}</span>
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))}
-          </div>
-        </ScrollArea>
-      </aside>
-
-      {/* Main Content */}
-      <main className="flex-1 flex flex-col">
-        <div className="flex-1 overflow-auto p-8">
-          <div className="max-w-4xl mx-auto">
-            <div className="mb-6">
-              <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
-                <span>
-                  Módulo {currentModuleIndex + 1}, Lección {currentLessonIndex + 1}
-                </span>
-                {currentLesson.duration && (
-                  <>
-                    <span>•</span>
-                    <span>{currentLesson.duration}</span>
-                  </>
-                )}
-              </div>
-              <h1 className="text-2xl font-bold">{currentLesson.title}</h1>
-            </div>
-
-            {/* Content based on type */}
-            {renderLessonContent()}
-
-            {/* Attachments */}
-            {renderAttachments()}
-
-            {/* Mark as complete */}
-            <div className="mt-8">
-              {!isLessonCompleted(currentLesson.id) ? (
-                <Button onClick={handleMarkComplete} className="gap-2" disabled={markComplete.isPending}>
-                  {markComplete.isPending ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : (
-                    <CheckCircle className="w-4 h-4" />
-                  )}
-                  Marcar como completada
-                </Button>
-              ) : (
-                <div className="flex items-center gap-2 text-green-600 bg-green-50 p-4 rounded-lg">
-                  <CheckCircle className="w-5 h-5" />
-                  <span className="font-medium">Lección completada</span>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Navigation Footer */}
-        <footer className="border-t p-4 flex justify-between items-center bg-card">
-          <Button
-            variant="outline"
-            onClick={handlePrevious}
-            disabled={getAllLessons().findIndex((l) => l.id === currentLesson.id) === 0}
-          >
-            <ChevronLeft className="w-4 h-4 mr-2" /> Anterior
-          </Button>
-          <span className="text-sm text-muted-foreground">
-            {getAllLessons().findIndex((l) => l.id === currentLesson.id) + 1} de {getAllLessons().length}
-          </span>
-          <Button
-            onClick={handleNext}
-            disabled={
-              getAllLessons().findIndex((l) => l.id === currentLesson.id) === getAllLessons().length - 1
-            }
-          >
-            Siguiente <ChevronRight className="w-4 h-4 ml-2" />
-          </Button>
-        </footer>
-      </main>
+        {/* Lesson Content */}
+        <main className="flex-1 flex flex-col overflow-hidden">
+          <LessonContent
+            lesson={currentLesson}
+            moduleIndex={currentModuleIndex}
+            lessonIndex={currentLessonIndex}
+            isCompleted={isLessonCompleted(currentLesson.id)}
+            isMarkingComplete={markComplete.isPending}
+            onMarkComplete={handleMarkComplete}
+            onPrevious={handlePrevious}
+            onNext={handleNext}
+            hasPrevious={getCurrentPosition() > 1}
+            hasNext={getCurrentPosition() < getTotalLessons()}
+            currentPosition={getCurrentPosition()}
+            totalLessons={getTotalLessons()}
+          />
+        </main>
+      </div>
     </div>
   );
 };

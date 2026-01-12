@@ -2,6 +2,7 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { LayoutDashboard, LogOut, Home } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import logo from '@/assets/logo.png';
 
 export const StudentSidebar = () => {
   const { logout, user } = useAuth();
@@ -14,11 +15,9 @@ export const StudentSidebar = () => {
 
   return (
     <aside className="w-64 bg-sidebar text-sidebar-foreground min-h-screen flex flex-col">
-      <div className="p-6 border-b border-sidebar-border">
-        <h1 className="text-xl font-bold">
-          BARBER<span className="text-sidebar-primary">SHOP</span>
-        </h1>
-        <p className="text-sm text-sidebar-foreground/60 mt-1">Portal del Estudiante</p>
+      <div className="p-4 border-b border-sidebar-border flex flex-col items-center">
+        <img src={logo} alt="Claros Studio" className="h-16 w-auto mb-2" />
+        <p className="text-sm text-sidebar-foreground/60">Portal del Estudiante</p>
       </div>
 
       <nav className="flex-1 p-4">

@@ -194,6 +194,7 @@ ${message}`;
                   value={formData.name}
                   onChange={(e) => handleChange('name', e.target.value)}
                   onBlur={() => handleBlur('name')}
+                  style={{ color: '#000' }}
                   maxLength={100}
                   className={cn(
                     'bg-background',
@@ -219,6 +220,7 @@ ${message}`;
                   value={formData.email}
                   onChange={(e) => handleChange('email', e.target.value)}
                   onBlur={() => handleBlur('email')}
+                  style={{ color: '#000' }}
                   maxLength={255}
                   className={cn(
                     'bg-background',
@@ -248,6 +250,7 @@ ${message}`;
                   value={formData.message}
                   onChange={(e) => handleChange('message', e.target.value)}
                   onBlur={() => handleBlur('message')}
+                  style={{ color: '#000' }}
                   maxLength={1000}
                   rows={5}
                   className={cn(

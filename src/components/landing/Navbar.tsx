@@ -3,6 +3,7 @@ import { Menu, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 import { Link, useNavigate } from 'react-router-dom';
+import logo from '@/assets/logo.png';
 
 const navItems = [
   { label: 'Inicio', href: '#hero' },
@@ -43,8 +44,8 @@ export const Navbar = () => {
       <div className="container-custom mx-auto px-4">
         <div className="flex items-center justify-between h-16 md:h-20">
           {/* Logo */}
-          <a href="#hero" className="text-2xl md:text-3xl font-bold text-primary-foreground">
-            CLAROS <span className="text-primary">STUDIO</span>
+          <a href="#hero" className="flex items-center">
+            <img src={logo} alt="Claros Studio" className="h-12 md:h-16 w-auto" />
           </a>
 
           {/* Desktop Navigation */}

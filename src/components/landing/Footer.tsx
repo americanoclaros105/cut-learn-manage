@@ -1,5 +1,6 @@
 import { LandingContent } from '@/types';
 import { Instagram, Facebook, Youtube } from 'lucide-react';
+import logo from '@/assets/logo.png';
 
 interface FooterProps {
   content: LandingContent;
@@ -12,11 +13,9 @@ export const Footer = ({ content }: FooterProps) => {
         <div className="grid md:grid-cols-3 gap-8 mb-8">
           {/* Logo & Description */}
           <div>
-            <h3 className="text-2xl font-bold mb-4">
-              CLAROS <span className="text-primary">STUDIO</span>
-            </h3>
+            <img src={logo} alt="Claros Studio" className="h-20 w-auto mb-4" />
             <p className="text-background/70">
-              El arte del estilo masculino. Tradición y modernidad en cada corte.
+              El arte del estilo femenino. Tradición y modernidad en cada servicio.
             </p>
           </div>
 

@@ -19,7 +19,31 @@ export const ContactSection = ({ content }: ContactSectionProps) => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    toast.success('¡Mensaje enviado! Te contactaremos pronto.');
+    
+    // Validate inputs
+    const name = formData.name.trim();
+    const email = formData.email.trim();
+    const message = formData.message.trim();
+    
+    if (!name || !email || !message) {
+      toast.error('Por favor completa todos los campos');
+      return;
+    }
+    
+    // Build WhatsApp message with form data
+    const whatsappMessage = `📩 *Nuevo mensaje de contacto*
+
+👤 *Nombre:* ${name}
+📧 *Email:* ${email}
+
+💬 *Mensaje:*
+${message}`;
+    
+    const phone = content.whatsapp.replace(/\D/g, '');
+    const encodedMessage = encodeURIComponent(whatsappMessage);
+    window.open(`https://api.whatsapp.com/send?phone=+${phone}&text=${encodedMessage}`, '_blank');
+    
+    toast.success('¡Redirigiendo a WhatsApp!');
     setFormData({ name: '', email: '', message: '' });
   };
 

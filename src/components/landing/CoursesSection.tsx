@@ -86,11 +86,11 @@ export const CoursesSection = ({ title, subtitle, courses, whatsapp }: CoursesSe
         <div className="text-center mt-10">
           <Button
             size="lg"
-            onClick={() => navigate('/login')}
-            className="gap-2"
+            onClick={() => openWhatsApp(whatsapp, 'todos los cursos disponibles', 'curso')}
+            className="gap-2 bg-green-500 hover:bg-green-600 text-white"
           >
+            <i className="fab fa-whatsapp text-lg" />
             Ver Todos los Cursos
-            <ArrowRight className="w-4 h-4" />
           </Button>
         </div>
       </div>

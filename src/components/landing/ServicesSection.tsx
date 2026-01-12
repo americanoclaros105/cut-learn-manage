@@ -1,5 +1,6 @@
+import { useState } from 'react';
 import { ServiceItem } from '@/types';
-import { Clock, DollarSign } from 'lucide-react';
+import { Clock, DollarSign, ChevronDown, ChevronUp } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { openWhatsApp } from '@/lib/whatsapp';
@@ -10,6 +11,11 @@ interface ServicesSectionProps {
 }
 
 export const ServicesSection = ({ services, whatsapp }: ServicesSectionProps) => {
+  const [showAll, setShowAll] = useState(false);
+
+  const displayedServices = showAll ? services : services.slice(0, 4);
+  const hasMoreServices = services.length > 4;
+
   return (
     <section id="services" className="section-padding bg-background">
       <div className="container-custom mx-auto">
@@ -23,7 +29,7 @@ export const ServicesSection = ({ services, whatsapp }: ServicesSectionProps) =>
         </div>
 
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {services.map((service) => (
+          {displayedServices.map((service) => (
             <Card
               key={service.id}
               className="group overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-2 flex flex-col h-full"
@@ -59,6 +65,29 @@ export const ServicesSection = ({ services, whatsapp }: ServicesSectionProps) =>
             </Card>
           ))}
         </div>
+
+        {hasMoreServices && (
+          <div className="text-center mt-8">
+            <Button
+              variant="outline"
+              size="lg"
+              onClick={() => setShowAll(!showAll)}
+              className="gap-2"
+            >
+              {showAll ? (
+                <>
+                  Ver menos
+                  <ChevronUp className="w-4 h-4" />
+                </>
+              ) : (
+                <>
+                  Ver todos ({services.length})
+                  <ChevronDown className="w-4 h-4" />
+                </>
+              )}
+            </Button>
+          </div>
+        )}
       </div>
     </section>
   );

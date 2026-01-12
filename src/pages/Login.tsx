@@ -3,9 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { toast } from 'sonner';
 import { ArrowLeft, Loader2 } from 'lucide-react';
+import logo from '@/assets/logo.png';
 
 const Login = () => {
   const [email, setEmail] = useState('');
@@ -48,9 +49,9 @@ const Login = () => {
 
         <Card className="border-0 shadow-2xl">
           <CardHeader className="text-center pb-2">
-            <CardTitle className="text-2xl">
-              CLAROS <span className="text-primary">STUDIO</span>
-            </CardTitle>
+            <div className="flex justify-center mb-2">
+              <img src={logo} alt="Claros Studio" className="h-20 w-auto" />
+            </div>
             <p className="text-muted-foreground">Accede a tu cuenta</p>
           </CardHeader>
           <CardContent>

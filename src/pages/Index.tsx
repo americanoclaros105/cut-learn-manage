@@ -2,13 +2,14 @@ import { Navbar } from '@/components/landing/Navbar';
 import { HeroSection } from '@/components/landing/HeroSection';
 import { AboutSection } from '@/components/landing/AboutSection';
 import { ServicesSection } from '@/components/landing/ServicesSection';
+import { ProductsSection } from '@/components/landing/ProductsSection';
 import { CoursesSection } from '@/components/landing/CoursesSection';
 import { GallerySection } from '@/components/landing/GallerySection';
 import { TestimonialsSection } from '@/components/landing/TestimonialsSection';
 import { ContactSection } from '@/components/landing/ContactSection';
 import { Footer } from '@/components/landing/Footer';
 import { FloatingWhatsApp } from '@/components/FloatingWhatsApp';
-import { useLandingContent, useServices, useGallery, useTestimonials } from '@/hooks/useLandingContent';
+import { useLandingContent, useServices, useProducts, useGallery, useTestimonials } from '@/hooks/useLandingContent';
 import { useCourses } from '@/hooks/useCourses';
 import { useDynamicTheme } from '@/hooks/useDynamicTheme';
 import { Loader2 } from 'lucide-react';
@@ -51,11 +52,12 @@ const defaultContent = {
 const Index = () => {
   const { data: landingContent, isLoading: loadingContent } = useLandingContent();
   const { data: services = [], isLoading: loadingServices } = useServices();
+  const { data: products = [], isLoading: loadingProducts } = useProducts();
   const { data: gallery = [], isLoading: loadingGallery } = useGallery();
   const { data: testimonials = [], isLoading: loadingTestimonials } = useTestimonials();
   const { data: courses = [], isLoading: loadingCourses } = useCourses({ status: 'published' });
 
-  const isLoading = loadingContent || loadingServices || loadingGallery || loadingTestimonials || loadingCourses;
+  const isLoading = loadingContent || loadingServices || loadingProducts || loadingGallery || loadingTestimonials || loadingCourses;
 
   // Apply dynamic theme colors from landing content
   useDynamicTheme(landingContent?.theme_colors);
@@ -104,6 +106,15 @@ const Index = () => {
     price: Number(s.price),
     duration: s.duration || '',
     image: s.image || '',
+  }));
+
+  // Transform products for component
+  const productsForComponent = products.map(p => ({
+    id: p.id,
+    name: p.name,
+    description: p.description || '',
+    price: Number(p.price),
+    image: p.image || '',
   }));
 
   // Transform gallery for component
@@ -163,11 +174,13 @@ const Index = () => {
         whatsappMessage={contactContent.whatsappMessage}
       />
       <AboutSection content={aboutContent} />
-      <ServicesSection services={servicesForComponent} />
+      <ServicesSection services={servicesForComponent} whatsapp={contactContent.whatsapp} />
+      <ProductsSection products={productsForComponent} whatsapp={contactContent.whatsapp} />
       <CoursesSection 
         title={content.courses_section?.title || defaultContent.courses_section.title}
         subtitle={content.courses_section?.subtitle || defaultContent.courses_section.subtitle}
         courses={coursesForComponent}
+        whatsapp={contactContent.whatsapp}
       />
       <GallerySection gallery={galleryForComponent} />
       <TestimonialsSection testimonials={testimonialsForComponent} />

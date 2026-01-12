@@ -1,12 +1,15 @@
 import { ServiceItem } from '@/types';
 import { Clock, DollarSign } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { openWhatsApp } from '@/lib/whatsapp';
 
 interface ServicesSectionProps {
   services: ServiceItem[];
+  whatsapp: string;
 }
 
-export const ServicesSection = ({ services }: ServicesSectionProps) => {
+export const ServicesSection = ({ services, whatsapp }: ServicesSectionProps) => {
   return (
     <section id="services" className="section-padding bg-background">
       <div className="container-custom mx-auto">
@@ -35,7 +38,7 @@ export const ServicesSection = ({ services }: ServicesSectionProps) => {
               <CardContent className="p-6">
                 <h3 className="text-xl font-semibold text-foreground mb-2">{service.name}</h3>
                 <p className="text-muted-foreground text-sm mb-4">{service.description}</p>
-                <div className="flex items-center justify-between text-sm">
+                <div className="flex items-center justify-between text-sm mb-4">
                   <div className="flex items-center gap-1 text-muted-foreground">
                     <Clock className="w-4 h-4" />
                     <span>{service.duration}</span>
@@ -45,6 +48,13 @@ export const ServicesSection = ({ services }: ServicesSectionProps) => {
                     <span>{service.price}</span>
                   </div>
                 </div>
+                <Button
+                  onClick={() => openWhatsApp(whatsapp, service.name, 'servicio')}
+                  className="w-full bg-green-500 hover:bg-green-600 text-white gap-2"
+                >
+                  <i className="fab fa-whatsapp text-lg" />
+                  Reservar
+                </Button>
               </CardContent>
             </Card>
           ))}

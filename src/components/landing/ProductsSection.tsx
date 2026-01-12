@@ -28,31 +28,29 @@ export const ProductsSection = ({ products, whatsapp }: ProductsSectionProps) =>
           {products.map((product) => (
             <Card
               key={product.id}
-              className="group overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-2 bg-card"
+              className="group overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-2 bg-card flex flex-col h-full"
             >
-              <div className="aspect-square overflow-hidden">
+              <div className="aspect-square overflow-hidden flex-shrink-0">
                 <img
                   src={product.image}
                   alt={product.name}
                   className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                 />
               </div>
-              <CardContent className="p-5">
-                <h3 className="text-lg font-semibold text-card-foreground mb-1">
+              <CardContent className="p-5 flex flex-col flex-grow">
+                <h3 className="text-lg font-semibold text-card-foreground mb-1 line-clamp-1">
                   {product.name}
                 </h3>
-                <p className="text-muted-foreground text-sm mb-3 line-clamp-2">
+                <p className="text-muted-foreground text-sm mb-3 line-clamp-2 flex-grow">
                   {product.description}
                 </p>
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-1 text-primary font-bold text-xl">
-                    <DollarSign className="w-5 h-5" />
-                    <span>{product.price}</span>
-                  </div>
+                <div className="flex items-center gap-1 text-primary font-bold text-xl mb-4">
+                  <DollarSign className="w-5 h-5" />
+                  <span>{product.price}</span>
                 </div>
                 <Button
                   onClick={() => openWhatsApp(whatsapp, product.name, 'producto')}
-                  className="w-full bg-green-500 hover:bg-green-600 text-white gap-2"
+                  className="w-full h-11 bg-green-500 hover:bg-green-600 text-white gap-2 mt-auto"
                 >
                   <i className="fab fa-whatsapp text-lg" />
                   Más Info

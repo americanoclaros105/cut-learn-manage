@@ -26,18 +26,18 @@ export const ServicesSection = ({ services, whatsapp }: ServicesSectionProps) =>
           {services.map((service) => (
             <Card
               key={service.id}
-              className="group overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-2"
+              className="group overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-2 flex flex-col h-full"
             >
-              <div className="aspect-[4/3] overflow-hidden">
+              <div className="aspect-[4/3] overflow-hidden flex-shrink-0">
                 <img
                   src={service.image}
                   alt={service.name}
                   className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                 />
               </div>
-              <CardContent className="p-6">
-                <h3 className="text-xl font-semibold text-foreground mb-2">{service.name}</h3>
-                <p className="text-muted-foreground text-sm mb-4">{service.description}</p>
+              <CardContent className="p-6 flex flex-col flex-grow">
+                <h3 className="text-xl font-semibold text-foreground mb-2 line-clamp-1">{service.name}</h3>
+                <p className="text-muted-foreground text-sm mb-4 line-clamp-2 flex-grow">{service.description}</p>
                 <div className="flex items-center justify-between text-sm mb-4">
                   <div className="flex items-center gap-1 text-muted-foreground">
                     <Clock className="w-4 h-4" />
@@ -50,7 +50,7 @@ export const ServicesSection = ({ services, whatsapp }: ServicesSectionProps) =>
                 </div>
                 <Button
                   onClick={() => openWhatsApp(whatsapp, service.name, 'servicio')}
-                  className="w-full bg-green-500 hover:bg-green-600 text-white gap-2"
+                  className="w-full h-11 bg-green-500 hover:bg-green-600 text-white gap-2 mt-auto"
                 >
                   <i className="fab fa-whatsapp text-lg" />
                   Reservar

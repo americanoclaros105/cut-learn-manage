@@ -41,9 +41,9 @@ export const CoursesSection = ({ title, subtitle, courses, whatsapp }: CoursesSe
           {publishedCourses.map((course) => (
             <Card
               key={course.id}
-              className="bg-card border-0 overflow-hidden group hover:shadow-2xl transition-all duration-300"
+              className="bg-card border-0 overflow-hidden group hover:shadow-2xl transition-all duration-300 flex flex-col h-full"
             >
-              <div className="aspect-video overflow-hidden relative">
+              <div className="aspect-video overflow-hidden relative flex-shrink-0">
                 <img
                   src={course.coverImage}
                   alt={course.title}
@@ -53,10 +53,10 @@ export const CoursesSection = ({ title, subtitle, courses, whatsapp }: CoursesSe
                   {levelLabels[course.level]}
                 </Badge>
               </div>
-              <CardContent className="p-6">
-                <h3 className="text-xl font-semibold text-card-foreground mb-2">{course.title}</h3>
-                <p className="text-muted-foreground text-sm mb-4 line-clamp-2">{course.description}</p>
-                <div className="flex items-center justify-between">
+              <CardContent className="p-6 flex flex-col flex-grow">
+                <h3 className="text-xl font-semibold text-card-foreground mb-2 line-clamp-1">{course.title}</h3>
+                <p className="text-muted-foreground text-sm mb-4 line-clamp-2 flex-grow">{course.description}</p>
+                <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-4 text-sm text-muted-foreground">
                     <span className="flex items-center gap-1">
                       <Clock className="w-4 h-4" />
@@ -69,11 +69,11 @@ export const CoursesSection = ({ title, subtitle, courses, whatsapp }: CoursesSe
                   </div>
                 </div>
                 {course.price > 0 && (
-                  <div className="mt-4 text-2xl font-bold text-primary">${course.price}</div>
+                  <div className="text-2xl font-bold text-primary mb-4">${course.price}</div>
                 )}
                 <Button
                   onClick={() => openWhatsApp(whatsapp, course.title, 'curso')}
-                  className="w-full mt-4 bg-green-500 hover:bg-green-600 text-white gap-2"
+                  className="w-full h-11 bg-green-500 hover:bg-green-600 text-white gap-2 mt-auto"
                 >
                   <i className="fab fa-whatsapp text-lg" />
                   Inscribirme

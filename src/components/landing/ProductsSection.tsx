@@ -1,7 +1,8 @@
+import { useState } from 'react';
 import { ProductItem } from '@/types';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { DollarSign } from 'lucide-react';
+import { DollarSign, ChevronDown, ChevronUp } from 'lucide-react';
 import { openWhatsApp } from '@/lib/whatsapp';
 
 interface ProductsSectionProps {
@@ -10,7 +11,12 @@ interface ProductsSectionProps {
 }
 
 export const ProductsSection = ({ products, whatsapp }: ProductsSectionProps) => {
+  const [showAll, setShowAll] = useState(false);
+
   if (products.length === 0) return null;
+
+  const displayedProducts = showAll ? products : products.slice(0, 4);
+  const hasMoreProducts = products.length > 4;
 
   return (
     <section id="products" className="section-padding bg-secondary">
@@ -25,7 +31,7 @@ export const ProductsSection = ({ products, whatsapp }: ProductsSectionProps) =>
         </div>
 
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {products.map((product) => (
+          {displayedProducts.map((product) => (
             <Card
               key={product.id}
               className="group overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-2 bg-card flex flex-col h-full"
@@ -59,6 +65,29 @@ export const ProductsSection = ({ products, whatsapp }: ProductsSectionProps) =>
             </Card>
           ))}
         </div>
+
+        {hasMoreProducts && (
+          <div className="text-center mt-8">
+            <Button
+              variant="outline"
+              size="lg"
+              onClick={() => setShowAll(!showAll)}
+              className="gap-2"
+            >
+              {showAll ? (
+                <>
+                  Ver menos
+                  <ChevronUp className="w-4 h-4" />
+                </>
+              ) : (
+                <>
+                  Ver todos ({products.length})
+                  <ChevronDown className="w-4 h-4" />
+                </>
+              )}
+            </Button>
+          </div>
+        )}
       </div>
     </section>
   );

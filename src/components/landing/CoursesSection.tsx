@@ -1,11 +1,10 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Course } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Clock, BookOpen, ChevronDown, ChevronUp, Filter } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { Clock, BookOpen, ChevronDown, ChevronUp, Filter, ArrowUpDown, Calendar, DollarSign } from 'lucide-react';
 import { openWhatsApp } from '@/lib/whatsapp';
 
 interface CourseWithStats extends Course {
@@ -20,6 +19,7 @@ interface CoursesSectionProps {
 }
 
 type LevelFilter = 'all' | 'beginner' | 'intermediate' | 'advanced';
+type SortOption = 'newest' | 'oldest' | 'price-low' | 'price-high';
 
 const levelColors = {
   beginner: 'bg-emerald-500 text-white border-emerald-600 shadow-lg shadow-emerald-500/30',
@@ -33,28 +33,55 @@ const levelLabels = {
   advanced: 'Avanzado',
 };
 
-const filterButtons: { value: LevelFilter; label: string; activeClass: string }[] = [
-  { value: 'all', label: 'Todos', activeClass: 'bg-primary text-primary-foreground' },
-  { value: 'beginner', label: 'Principiante', activeClass: 'bg-emerald-500 text-white' },
-  { value: 'intermediate', label: 'Intermedio', activeClass: 'bg-amber-500 text-white' },
-  { value: 'advanced', label: 'Avanzado', activeClass: 'bg-rose-500 text-white' },
+const filterButtons: { value: LevelFilter; label: string; color: string }[] = [
+  { value: 'all', label: 'Todos', color: 'primary' },
+  { value: 'beginner', label: 'Principiante', color: 'emerald' },
+  { value: 'intermediate', label: 'Intermedio', color: 'amber' },
+  { value: 'advanced', label: 'Avanzado', color: 'rose' },
+];
+
+const sortOptions: { value: SortOption; label: string; icon: typeof Calendar }[] = [
+  { value: 'newest', label: 'Más recientes', icon: Calendar },
+  { value: 'oldest', label: 'Más antiguos', icon: Calendar },
+  { value: 'price-low', label: 'Menor precio', icon: DollarSign },
+  { value: 'price-high', label: 'Mayor precio', icon: DollarSign },
 ];
 
 export const CoursesSection = ({ title, subtitle, courses, whatsapp }: CoursesSectionProps) => {
-  const navigate = useNavigate();
   const [expandedDescriptions, setExpandedDescriptions] = useState<Record<string, boolean>>({});
   const [showAllCourses, setShowAllCourses] = useState(false);
   const [levelFilter, setLevelFilter] = useState<LevelFilter>('all');
+  const [sortBy, setSortBy] = useState<SortOption>('newest');
   
   const publishedCourses = courses.filter((c) => c.status === 'published');
   
-  // Apply level filter
-  const filteredCourses = levelFilter === 'all' 
-    ? publishedCourses 
-    : publishedCourses.filter((c) => c.level === levelFilter);
+  // Apply filter and sort
+  const processedCourses = useMemo(() => {
+    let result = levelFilter === 'all' 
+      ? [...publishedCourses] 
+      : publishedCourses.filter((c) => c.level === levelFilter);
+    
+    // Sort courses
+    result.sort((a, b) => {
+      switch (sortBy) {
+        case 'newest':
+          return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
+        case 'oldest':
+          return new Date(a.updatedAt).getTime() - new Date(b.updatedAt).getTime();
+        case 'price-low':
+          return a.price - b.price;
+        case 'price-high':
+          return b.price - a.price;
+        default:
+          return 0;
+      }
+    });
+    
+    return result;
+  }, [publishedCourses, levelFilter, sortBy]);
   
-  const displayedCourses = showAllCourses ? filteredCourses : filteredCourses.slice(0, 3);
-  const hasMoreCourses = filteredCourses.length > 3;
+  const displayedCourses = showAllCourses ? processedCourses : processedCourses.slice(0, 3);
+  const hasMoreCourses = processedCourses.length > 3;
 
   const toggleDescription = (courseId: string) => {
     setExpandedDescriptions(prev => ({
@@ -63,9 +90,24 @@ export const CoursesSection = ({ title, subtitle, courses, whatsapp }: CoursesSe
     }));
   };
 
+  const getFilterButtonClasses = (filter: typeof filterButtons[0], isActive: boolean) => {
+    if (!isActive) {
+      return 'bg-card hover:bg-card/80 border-border text-foreground';
+    }
+    switch (filter.color) {
+      case 'emerald':
+        return 'bg-emerald-500 text-white border-emerald-500 shadow-md';
+      case 'amber':
+        return 'bg-amber-500 text-white border-amber-500 shadow-md';
+      case 'rose':
+        return 'bg-rose-500 text-white border-rose-500 shadow-md';
+      default:
+        return 'bg-primary text-primary-foreground border-primary shadow-md';
+    }
+  };
+
   const DESCRIPTION_LIMIT = 100;
 
-  // Animation variants
   const containerVariants = {
     hidden: {},
     visible: {
@@ -76,76 +118,103 @@ export const CoursesSection = ({ title, subtitle, courses, whatsapp }: CoursesSe
   };
 
   const cardVariants = {
-    hidden: { 
-      opacity: 0, 
-      y: 20,
-      scale: 0.95
-    },
+    hidden: { opacity: 0, y: 20, scale: 0.95 },
     visible: { 
       opacity: 1, 
-      y: 0,
+      y: 0, 
       scale: 1,
-      transition: {
-        duration: 0.4,
-        ease: [0.25, 0.46, 0.45, 0.94] as const
-      }
+      transition: { duration: 0.4, ease: [0.25, 0.46, 0.45, 0.94] as const }
     },
     exit: { 
       opacity: 0, 
-      y: -10,
+      y: -10, 
       scale: 0.95,
-      transition: {
-        duration: 0.3,
-        ease: [0.55, 0.055, 0.675, 0.19] as const
-      }
+      transition: { duration: 0.3, ease: [0.55, 0.055, 0.675, 0.19] as const }
     }
   };
 
   return (
     <section id="courses" className="section-padding bg-accent text-accent-foreground">
       <div className="container-custom mx-auto">
-        <div className="text-center mb-8">
-          <h2 className="text-3xl md:text-4xl font-bold mb-4">{title}</h2>
-          <p className="text-accent-foreground/70 max-w-2xl mx-auto">{subtitle}</p>
+        {/* Header */}
+        <div className="text-center mb-10">
+          <h2 className="text-3xl md:text-4xl font-bold mb-4 text-foreground">{title}</h2>
+          <p className="text-muted-foreground max-w-2xl mx-auto">{subtitle}</p>
         </div>
 
-        {/* Level Filters */}
-        <div className="flex flex-wrap justify-center gap-2 mb-10">
-          <div className="flex items-center gap-2 mr-2 text-muted-foreground">
-            <Filter className="w-4 h-4" />
-            <span className="text-sm font-medium hidden sm:inline">Filtrar:</span>
+        {/* Filters and Sort Controls */}
+        <div className="bg-card/50 backdrop-blur-sm rounded-xl p-4 mb-8 border border-border/50">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+            {/* Level Filters */}
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="flex items-center gap-2 text-muted-foreground mr-1">
+                <Filter className="w-4 h-4" />
+                <span className="text-sm font-medium">Nivel:</span>
+              </div>
+              {filterButtons.map((filter) => {
+                const isActive = levelFilter === filter.value;
+                const count = filter.value === 'all' 
+                  ? publishedCourses.length 
+                  : publishedCourses.filter(c => c.level === filter.value).length;
+                
+                return (
+                  <Button
+                    key={filter.value}
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setLevelFilter(filter.value);
+                      setShowAllCourses(false);
+                    }}
+                    className={`transition-all duration-200 ${getFilterButtonClasses(filter, isActive)}`}
+                  >
+                    {filter.label}
+                    <span className={`ml-1.5 text-xs ${isActive ? 'opacity-80' : 'opacity-60'}`}>
+                      ({count})
+                    </span>
+                  </Button>
+                );
+              })}
+            </div>
+
+            {/* Sort Options */}
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="flex items-center gap-2 text-muted-foreground mr-1">
+                <ArrowUpDown className="w-4 h-4" />
+                <span className="text-sm font-medium">Ordenar:</span>
+              </div>
+              {sortOptions.map((option) => {
+                const isActive = sortBy === option.value;
+                const Icon = option.icon;
+                
+                return (
+                  <Button
+                    key={option.value}
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setSortBy(option.value)}
+                    className={`transition-all duration-200 ${
+                      isActive 
+                        ? 'bg-primary text-primary-foreground border-primary shadow-md' 
+                        : 'bg-card hover:bg-card/80 border-border text-foreground'
+                    }`}
+                  >
+                    <Icon className="w-3.5 h-3.5 mr-1" />
+                    {option.label}
+                  </Button>
+                );
+              })}
+            </div>
           </div>
-          {filterButtons.map((filter) => (
-            <Button
-              key={filter.value}
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                setLevelFilter(filter.value);
-                setShowAllCourses(false);
-              }}
-              className={`transition-all duration-300 ${
-                levelFilter === filter.value 
-                  ? filter.activeClass + ' border-transparent shadow-md' 
-                  : 'bg-card/50 hover:bg-card border-border'
-              }`}
-            >
-              {filter.label}
-              {filter.value !== 'all' && (
-                <span className="ml-1.5 text-xs opacity-70">
-                  ({publishedCourses.filter(c => c.level === filter.value).length})
-                </span>
-              )}
-            </Button>
-          ))}
         </div>
 
+        {/* Course Grid */}
         <motion.div 
           className="grid md:grid-cols-2 lg:grid-cols-3 gap-8"
           variants={containerVariants}
           initial="hidden"
           animate="visible"
-          key={`${levelFilter}-${showAllCourses}`}
+          key={`${levelFilter}-${sortBy}-${showAllCourses}`}
         >
           <AnimatePresence mode="popLayout">
             {displayedCourses.map((course) => {
@@ -161,14 +230,14 @@ export const CoursesSection = ({ title, subtitle, courses, whatsapp }: CoursesSe
                   exit="exit"
                   layout
                 >
-                  <Card className="bg-card border-0 overflow-hidden group hover:shadow-2xl transition-all duration-300 flex flex-col h-full">
+                  <Card className="bg-card border border-border/50 overflow-hidden group hover:shadow-2xl hover:border-primary/20 transition-all duration-300 flex flex-col h-full">
                     <div className="aspect-video overflow-hidden relative flex-shrink-0">
                       <img
                         src={course.coverImage}
                         alt={course.title}
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                       />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent" />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
                       <Badge className={`absolute top-4 left-4 ${levelColors[course.level]} font-semibold px-3 py-1`}>
                         {levelLabels[course.level]}
                       </Badge>
@@ -178,7 +247,7 @@ export const CoursesSection = ({ title, subtitle, courses, whatsapp }: CoursesSe
                         {course.title}
                       </h3>
                       
-                      {/* Description with expand/collapse */}
+                      {/* Description */}
                       <div className="mb-4">
                         <p className={`text-muted-foreground text-sm leading-relaxed ${!isExpanded && isLongDescription ? 'line-clamp-2' : ''}`}>
                           {course.description}
@@ -189,19 +258,15 @@ export const CoursesSection = ({ title, subtitle, courses, whatsapp }: CoursesSe
                             className="text-primary text-sm font-medium hover:underline mt-2 flex items-center gap-1 transition-colors"
                           >
                             {isExpanded ? (
-                              <>
-                                Ver menos <ChevronUp className="w-3 h-3" />
-                              </>
+                              <>Ver menos <ChevronUp className="w-3 h-3" /></>
                             ) : (
-                              <>
-                                Ver más <ChevronDown className="w-3 h-3" />
-                              </>
+                              <>Ver más <ChevronDown className="w-3 h-3" /></>
                             )}
                           </button>
                         )}
                       </div>
 
-                      {/* Stats: duration and lessons */}
+                      {/* Stats */}
                       <div className="flex items-center gap-4 text-sm text-muted-foreground mb-4">
                         {course.duration && (
                           <span className="flex items-center gap-1.5">
@@ -228,7 +293,7 @@ export const CoursesSection = ({ title, subtitle, courses, whatsapp }: CoursesSe
 
                       <Button
                         onClick={() => openWhatsApp(whatsapp, course.title, 'curso')}
-                        className="w-full h-11 bg-green-500 hover:bg-green-600 text-white gap-2 mt-auto"
+                        className="w-full h-11 bg-green-600 hover:bg-green-700 text-white gap-2 mt-auto font-medium"
                       >
                         <i className="fab fa-whatsapp text-lg" />
                         Inscribirme
@@ -241,19 +306,20 @@ export const CoursesSection = ({ title, subtitle, courses, whatsapp }: CoursesSe
           </AnimatePresence>
         </motion.div>
 
-        {/* Empty state when no courses match filter */}
-        {filteredCourses.length === 0 && (
+        {/* Empty state */}
+        {processedCourses.length === 0 && (
           <motion.div 
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             className="text-center py-12"
           >
             <p className="text-muted-foreground text-lg">
-              No hay cursos disponibles en este nivel.
+              No hay cursos disponibles con estos filtros.
             </p>
           </motion.div>
         )}
 
+        {/* Show more button */}
         {hasMoreCourses && (
           <motion.div 
             className="text-center mt-10"
@@ -263,18 +329,17 @@ export const CoursesSection = ({ title, subtitle, courses, whatsapp }: CoursesSe
           >
             <Button
               size="lg"
-              variant="outline"
               onClick={() => setShowAllCourses(!showAllCourses)}
-              className="gap-2 border-primary text-primary hover:bg-primary hover:text-primary-foreground transition-all"
+              className={`gap-2 font-medium transition-all ${
+                showAllCourses 
+                  ? 'bg-muted text-foreground hover:bg-muted/80' 
+                  : 'bg-primary text-primary-foreground hover:bg-primary/90'
+              }`}
             >
               {showAllCourses ? (
-                <>
-                  Ver Menos <ChevronUp className="w-5 h-5" />
-                </>
+                <>Ver Menos <ChevronUp className="w-5 h-5" /></>
               ) : (
-                <>
-                  Ver Todos los Cursos ({filteredCourses.length}) <ChevronDown className="w-5 h-5" />
-                </>
+                <>Ver Todos los Cursos ({processedCourses.length}) <ChevronDown className="w-5 h-5" /></>
               )}
             </Button>
           </motion.div>

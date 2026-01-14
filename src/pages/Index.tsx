@@ -10,7 +10,7 @@ import { ContactSection } from '@/components/landing/ContactSection';
 import { Footer } from '@/components/landing/Footer';
 import { FloatingWhatsApp } from '@/components/FloatingWhatsApp';
 import { useLandingContent, useServices, useProducts, useGallery, useTestimonials } from '@/hooks/useLandingContent';
-import { useCourses } from '@/hooks/useCourses';
+import { useCoursesWithStats } from '@/hooks/useCourses';
 import { useDynamicTheme } from '@/hooks/useDynamicTheme';
 import { Loader2 } from 'lucide-react';
 
@@ -55,7 +55,7 @@ const Index = () => {
   const { data: products = [], isLoading: loadingProducts } = useProducts();
   const { data: gallery = [], isLoading: loadingGallery } = useGallery();
   const { data: testimonials = [], isLoading: loadingTestimonials } = useTestimonials();
-  const { data: courses = [], isLoading: loadingCourses } = useCourses({ status: 'published' });
+  const { data: courses = [], isLoading: loadingCourses } = useCoursesWithStats({ status: 'published' });
 
   const isLoading = loadingContent || loadingServices || loadingProducts || loadingGallery || loadingTestimonials || loadingCourses;
 
@@ -146,6 +146,7 @@ const Index = () => {
     category: c.category || '',
     tags: c.tags || [],
     modules: [],
+    lessonCount: c.lesson_count,
     createdAt: c.created_at,
     updatedAt: c.updated_at,
   }));

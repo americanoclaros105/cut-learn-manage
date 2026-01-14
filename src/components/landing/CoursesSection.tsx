@@ -73,18 +73,20 @@ export const CoursesSection = ({ title, subtitle, courses, whatsapp }: CoursesSe
                   {levelLabels[course.level]}
                 </Badge>
                 </div>
-                <CardContent className="p-6 flex flex-col flex-grow">
-                  <h3 className="text-xl font-semibold text-card-foreground mb-2 line-clamp-1">{course.title}</h3>
+                <CardContent className="p-6 flex flex-col flex-grow text-left">
+                  <h3 className="text-xl font-bold text-card-foreground mb-3 line-clamp-2 leading-tight">
+                    {course.title}
+                  </h3>
                   
                   {/* Description with expand/collapse */}
-                  <div className="mb-4 flex-grow">
-                    <p className={`text-muted-foreground text-sm ${!isExpanded && isLongDescription ? 'line-clamp-2' : ''}`}>
+                  <div className="mb-4">
+                    <p className={`text-muted-foreground text-sm leading-relaxed ${!isExpanded && isLongDescription ? 'line-clamp-2' : ''}`}>
                       {course.description}
                     </p>
                     {isLongDescription && (
                       <button 
                         onClick={() => toggleDescription(course.id)}
-                        className="text-primary text-sm hover:underline mt-1 flex items-center gap-1"
+                        className="text-primary text-sm font-medium hover:underline mt-2 flex items-center gap-1 transition-colors"
                       >
                         {isExpanded ? (
                           <>
@@ -100,27 +102,27 @@ export const CoursesSection = ({ title, subtitle, courses, whatsapp }: CoursesSe
                   </div>
 
                   {/* Stats: duration and lessons */}
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                      {course.duration && (
-                        <span className="flex items-center gap-1">
-                          <Clock className="w-4 h-4" />
-                          {course.duration}
-                        </span>
-                      )}
-                      <span className="flex items-center gap-1">
-                        <BookOpen className="w-4 h-4" />
-                        {course.lessonCount || 0} lecciones
+                  <div className="flex items-center gap-4 text-sm text-muted-foreground mb-4">
+                    {course.duration && (
+                      <span className="flex items-center gap-1.5">
+                        <Clock className="w-4 h-4 text-primary" />
+                        {course.duration}
                       </span>
-                    </div>
+                    )}
+                    <span className="flex items-center gap-1.5">
+                      <BookOpen className="w-4 h-4 text-primary" />
+                      {course.lessonCount || 0} lecciones
+                    </span>
                   </div>
 
                   {/* Price */}
-                  <div className="text-2xl font-bold mb-4">
+                  <div className="mb-4">
                     {course.price > 0 ? (
-                      <span className="text-primary">${course.price}</span>
+                      <span className="text-2xl font-bold text-primary">${course.price}</span>
                     ) : (
-                      <span className="text-rose-500 uppercase tracking-wide">¡Gratis!</span>
+                      <span className="text-xl font-bold text-rose-500 bg-rose-500/10 px-3 py-1 rounded-full uppercase tracking-wide">
+                        ¡Gratis!
+                      </span>
                     )}
                   </div>
 

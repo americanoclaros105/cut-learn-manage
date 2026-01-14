@@ -43,7 +43,7 @@ const defaultContent = {
     image: 'https://images.unsplash.com/photo-1621605815971-fbc98d665033?w=800',
   },
   courses_section: {
-    title: 'Academia de Barbería',
+    title: 'Academia',
     subtitle: 'Aprende de los mejores profesionales',
   },
   contact: {

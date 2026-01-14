@@ -90,21 +90,6 @@ export const CoursesSection = ({ title, subtitle, courses, whatsapp }: CoursesSe
     }));
   };
 
-  const getFilterButtonClasses = (filter: typeof filterButtons[0], isActive: boolean) => {
-    if (!isActive) {
-      return 'bg-card hover:bg-card/80 border-border text-foreground';
-    }
-    switch (filter.color) {
-      case 'emerald':
-        return 'bg-emerald-500 text-white border-emerald-500 shadow-md';
-      case 'amber':
-        return 'bg-amber-500 text-white border-amber-500 shadow-md';
-      case 'rose':
-        return 'bg-rose-500 text-white border-rose-500 shadow-md';
-      default:
-        return 'bg-primary text-primary-foreground border-primary shadow-md';
-    }
-  };
 
   const DESCRIPTION_LIMIT = 100;
 
@@ -138,16 +123,16 @@ export const CoursesSection = ({ title, subtitle, courses, whatsapp }: CoursesSe
       <div className="container-custom mx-auto">
         {/* Header */}
         <div className="text-center mb-10">
-          <h2 className="text-3xl md:text-4xl font-bold mb-4 text-foreground">{title}</h2>
-          <p className="text-muted-foreground max-w-2xl mx-auto">{subtitle}</p>
+          <h2 className="text-3xl md:text-4xl font-bold mb-4 text-white">{title}</h2>
+          <p className="text-white/80 max-w-2xl mx-auto">{subtitle}</p>
         </div>
 
         {/* Filters and Sort Controls */}
-        <div className="bg-card/50 backdrop-blur-sm rounded-xl p-4 mb-8 border border-border/50">
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+        <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6 mb-8 border border-white/20">
+          <div className="flex flex-col items-center gap-5">
             {/* Level Filters */}
-            <div className="flex flex-wrap items-center gap-2">
-              <div className="flex items-center gap-2 text-muted-foreground mr-1">
+            <div className="flex flex-wrap items-center justify-center gap-2">
+              <div className="flex items-center gap-2 text-white/70 mr-3">
                 <Filter className="w-4 h-4" />
                 <span className="text-sm font-medium">Nivel:</span>
               </div>
@@ -166,20 +151,33 @@ export const CoursesSection = ({ title, subtitle, courses, whatsapp }: CoursesSe
                       setLevelFilter(filter.value);
                       setShowAllCourses(false);
                     }}
-                    className={`transition-all duration-200 ${getFilterButtonClasses(filter, isActive)}`}
+                    className={`transition-all duration-200 border ${
+                      isActive 
+                        ? filter.color === 'emerald' 
+                          ? 'bg-emerald-500 text-white border-emerald-500 shadow-md hover:bg-emerald-600'
+                          : filter.color === 'amber'
+                            ? 'bg-amber-500 text-white border-amber-500 shadow-md hover:bg-amber-600'
+                            : filter.color === 'rose'
+                              ? 'bg-rose-500 text-white border-rose-500 shadow-md hover:bg-rose-600'
+                              : 'bg-primary text-primary-foreground border-primary shadow-md hover:bg-primary/90'
+                        : 'bg-white/10 border-white/20 text-white hover:bg-white/20'
+                    }`}
                   >
                     {filter.label}
-                    <span className={`ml-1.5 text-xs ${isActive ? 'opacity-80' : 'opacity-60'}`}>
-                      ({count})
+                    <span className={`ml-1.5 text-xs px-1.5 py-0.5 rounded-full ${isActive ? 'bg-white/20' : 'bg-white/10'}`}>
+                      {count}
                     </span>
                   </Button>
                 );
               })}
             </div>
 
+            {/* Separator */}
+            <div className="w-full max-w-md h-px bg-white/20" />
+
             {/* Sort Options */}
-            <div className="flex flex-wrap items-center gap-2">
-              <div className="flex items-center gap-2 text-muted-foreground mr-1">
+            <div className="flex flex-wrap items-center justify-center gap-2">
+              <div className="flex items-center gap-2 text-white/70 mr-3">
                 <ArrowUpDown className="w-4 h-4" />
                 <span className="text-sm font-medium">Ordenar:</span>
               </div>
@@ -193,13 +191,13 @@ export const CoursesSection = ({ title, subtitle, courses, whatsapp }: CoursesSe
                     variant="outline"
                     size="sm"
                     onClick={() => setSortBy(option.value)}
-                    className={`transition-all duration-200 ${
+                    className={`transition-all duration-200 border ${
                       isActive 
-                        ? 'bg-primary text-primary-foreground border-primary shadow-md' 
-                        : 'bg-card hover:bg-card/80 border-border text-foreground'
+                        ? 'bg-primary text-primary-foreground border-primary shadow-md hover:bg-primary/90' 
+                        : 'bg-white/10 border-white/20 text-white hover:bg-white/20'
                     }`}
                   >
-                    <Icon className="w-3.5 h-3.5 mr-1" />
+                    <Icon className="w-3.5 h-3.5 mr-1.5" />
                     {option.label}
                   </Button>
                 );

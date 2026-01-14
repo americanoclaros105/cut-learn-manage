@@ -33,7 +33,11 @@ const levelLabels = {
 export const CoursesSection = ({ title, subtitle, courses, whatsapp }: CoursesSectionProps) => {
   const navigate = useNavigate();
   const [expandedDescriptions, setExpandedDescriptions] = useState<Record<string, boolean>>({});
-  const publishedCourses = courses.filter((c) => c.status === 'published').slice(0, 3);
+  const [showAllCourses, setShowAllCourses] = useState(false);
+  
+  const publishedCourses = courses.filter((c) => c.status === 'published');
+  const displayedCourses = showAllCourses ? publishedCourses : publishedCourses.slice(0, 3);
+  const hasMoreCourses = publishedCourses.length > 3;
 
   const toggleDescription = (courseId: string) => {
     setExpandedDescriptions(prev => ({
@@ -53,7 +57,7 @@ export const CoursesSection = ({ title, subtitle, courses, whatsapp }: CoursesSe
         </div>
 
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {publishedCourses.map((course) => {
+          {displayedCourses.map((course) => {
             const isExpanded = expandedDescriptions[course.id];
             const isLongDescription = course.description.length > DESCRIPTION_LIMIT;
 
@@ -139,16 +143,26 @@ export const CoursesSection = ({ title, subtitle, courses, whatsapp }: CoursesSe
           })}
         </div>
 
-        <div className="text-center mt-10">
-          <Button
-            size="lg"
-            onClick={() => openWhatsApp(whatsapp, 'todos los cursos disponibles', 'curso')}
-            className="gap-2 bg-green-500 hover:bg-green-600 text-white"
-          >
-            <i className="fab fa-whatsapp text-lg" />
-            Ver Todos los Cursos
-          </Button>
-        </div>
+        {hasMoreCourses && (
+          <div className="text-center mt-10">
+            <Button
+              size="lg"
+              variant="outline"
+              onClick={() => setShowAllCourses(!showAllCourses)}
+              className="gap-2 border-primary text-primary hover:bg-primary hover:text-primary-foreground transition-all"
+            >
+              {showAllCourses ? (
+                <>
+                  Ver Menos <ChevronUp className="w-5 h-5" />
+                </>
+              ) : (
+                <>
+                  Ver Todos los Cursos ({publishedCourses.length}) <ChevronDown className="w-5 h-5" />
+                </>
+              )}
+            </Button>
+          </div>
+        )}
       </div>
     </section>
   );

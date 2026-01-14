@@ -77,6 +77,46 @@ export const useCourses = (options?: { status?: 'published' | 'draft' | 'archive
   });
 };
 
+export interface CourseWithStats extends Course {
+  lesson_count: number;
+}
+
+export const useCoursesWithStats = (options?: { status?: 'published' | 'draft' | 'archived' }) => {
+  return useQuery({
+    queryKey: ['courses-with-stats', options?.status],
+    queryFn: async () => {
+      let query = supabase
+        .from('courses')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (options?.status) {
+        query = query.eq('status', options.status);
+      }
+      
+      const { data: courses, error } = await query;
+      if (error) throw error;
+
+      // Get lesson counts for each course
+      const coursesWithStats = await Promise.all(
+        (courses || []).map(async (course) => {
+          const { count } = await supabase
+            .from('lessons')
+            .select('*, modules!inner(course_id)', { count: 'exact', head: true })
+            .eq('modules.course_id', course.id);
+          
+          return { 
+            ...course, 
+            lesson_count: count || 0 
+          } as unknown as CourseWithStats;
+        })
+      );
+      
+      return coursesWithStats;
+    },
+  });
+};
+
 export const useCourseWithModules = (courseId: string) => {
   return useQuery({
     queryKey: ['course', courseId],

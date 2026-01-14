@@ -19,9 +19,9 @@ interface CoursesSectionProps {
 }
 
 const levelColors = {
-  beginner: 'bg-green-500/10 text-green-600 border-green-500/20',
-  intermediate: 'bg-yellow-500/10 text-yellow-600 border-yellow-500/20',
-  advanced: 'bg-red-500/10 text-red-600 border-red-500/20',
+  beginner: 'bg-emerald-500 text-white border-emerald-600 shadow-lg shadow-emerald-500/30',
+  intermediate: 'bg-amber-500 text-white border-amber-600 shadow-lg shadow-amber-500/30',
+  advanced: 'bg-rose-500 text-white border-rose-600 shadow-lg shadow-rose-500/30',
 };
 
 const levelLabels = {
@@ -68,9 +68,10 @@ export const CoursesSection = ({ title, subtitle, courses, whatsapp }: CoursesSe
                     alt={course.title}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                   />
-                  <Badge className={`absolute top-4 left-4 ${levelColors[course.level]}`}>
-                    {levelLabels[course.level]}
-                  </Badge>
+                <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent" />
+                <Badge className={`absolute top-4 left-4 ${levelColors[course.level]} font-semibold px-3 py-1`}>
+                  {levelLabels[course.level]}
+                </Badge>
                 </div>
                 <CardContent className="p-6 flex flex-col flex-grow">
                   <h3 className="text-xl font-semibold text-card-foreground mb-2 line-clamp-1">{course.title}</h3>
@@ -119,7 +120,7 @@ export const CoursesSection = ({ title, subtitle, courses, whatsapp }: CoursesSe
                     {course.price > 0 ? (
                       <span className="text-primary">${course.price}</span>
                     ) : (
-                      <span className="text-green-600">Gratis</span>
+                      <span className="text-rose-500 uppercase tracking-wide">¡Gratis!</span>
                     )}
                   </div>
 

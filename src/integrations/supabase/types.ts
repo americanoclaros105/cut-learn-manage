@@ -246,6 +246,36 @@ export type Database = {
           },
         ]
       }
+      page_views: {
+        Row: {
+          created_at: string
+          device_type: string | null
+          id: string
+          page_path: string
+          referrer: string | null
+          session_id: string
+          user_agent: string | null
+        }
+        Insert: {
+          created_at?: string
+          device_type?: string | null
+          id?: string
+          page_path?: string
+          referrer?: string | null
+          session_id: string
+          user_agent?: string | null
+        }
+        Update: {
+          created_at?: string
+          device_type?: string | null
+          id?: string
+          page_path?: string
+          referrer?: string | null
+          session_id?: string
+          user_agent?: string | null
+        }
+        Relationships: []
+      }
       products: {
         Row: {
           created_at: string
@@ -312,6 +342,33 @@ export type Database = {
           phone?: string | null
           status?: Database["public"]["Enums"]["user_status"]
           updated_at?: string
+        }
+        Relationships: []
+      }
+      section_clicks: {
+        Row: {
+          created_at: string
+          element_label: string | null
+          element_type: string
+          id: string
+          section_name: string
+          session_id: string
+        }
+        Insert: {
+          created_at?: string
+          element_label?: string | null
+          element_type: string
+          id?: string
+          section_name: string
+          session_id: string
+        }
+        Update: {
+          created_at?: string
+          element_label?: string | null
+          element_type?: string
+          id?: string
+          section_name?: string
+          session_id?: string
         }
         Relationships: []
       }

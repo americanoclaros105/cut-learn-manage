@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { startOfDay, startOfWeek, startOfMonth, subHours, endOfDay } from 'date-fns';
@@ -49,7 +50,11 @@ const getDateRange = (filters: AnalyticsFilters) => {
 };
 
 export const useAnalyticsData = (filters: AnalyticsFilters) => {
-  const { start, end } = getDateRange(filters);
+  // Memoize date range to prevent queryKey from changing on every render
+  const { start, end } = useMemo(
+    () => getDateRange(filters),
+    [filters.timeFilter, filters.startDate?.getTime(), filters.endDate?.getTime()]
+  );
 
   // Query for page views
   const pageViewsQuery = useQuery({

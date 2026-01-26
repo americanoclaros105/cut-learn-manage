@@ -5,13 +5,20 @@ interface HeroSectionProps {
   content: LandingContent["hero"];
   whatsapp: string;
   whatsappMessage: string;
+  onTrackClick?: (section: string, type: string, label?: string) => void;
 }
 
-export const HeroSection = ({ content, whatsapp, whatsappMessage }: HeroSectionProps) => {
+export const HeroSection = ({ content, whatsapp, whatsappMessage, onTrackClick }: HeroSectionProps) => {
   const handleWhatsAppClick = () => {
+    onTrackClick?.('hero', 'button', content.ctaText);
     const message = encodeURIComponent(whatsappMessage);
     const phone = whatsapp.replace(/\D/g, "");
     window.open(`https://api.whatsapp.com/send?phone=+${phone}&text=${message}`, "_blank");
+  };
+
+  const handleViewServicesClick = () => {
+    onTrackClick?.('hero', 'button', 'Ver Servicios');
+    document.querySelector("#services")?.scrollIntoView({ behavior: "smooth" });
   };
 
   return (
@@ -60,7 +67,7 @@ export const HeroSection = ({ content, whatsapp, whatsappMessage }: HeroSectionP
           <Button
             size="lg"
             variant="outline"
-            onClick={() => document.querySelector("#services")?.scrollIntoView({ behavior: "smooth" })}
+            onClick={handleViewServicesClick}
             className="text-lg px-8 py-6 border-primary-foreground/50 text-secondary-foreground hover:bg-primary-foreground/10"
           >
             Ver Servicios

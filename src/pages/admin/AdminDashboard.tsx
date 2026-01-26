@@ -1,8 +1,8 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useCourses } from '@/hooks/useCourses';
 import { useStudents } from '@/hooks/useStudents';
-import { useUserProgress } from '@/hooks/useProgress';
 import { Users, GraduationCap, BookOpen, TrendingUp, Loader2 } from 'lucide-react';
+import { AnalyticsDashboard } from '@/components/admin/AnalyticsDashboard';
 
 export const AdminDashboard = () => {
   const { data: courses = [], isLoading: loadingCourses } = useCourses();
@@ -133,6 +133,11 @@ export const AdminDashboard = () => {
             </div>
           </CardContent>
         </Card>
+      </div>
+
+      {/* Analytics Dashboard */}
+      <div className="mt-8">
+        <AnalyticsDashboard />
       </div>
     </div>
   );

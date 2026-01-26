@@ -12,6 +12,7 @@ import { FloatingWhatsApp } from "@/components/FloatingWhatsApp";
 import { useLandingContent, useServices, useProducts, useGallery, useTestimonials } from "@/hooks/useLandingContent";
 import { useCoursesWithStats } from "@/hooks/useCourses";
 import { useDynamicTheme } from "@/hooks/useDynamicTheme";
+import { useAnalytics } from "@/hooks/useAnalytics";
 import { Loader2 } from "lucide-react";
 
 // Default content for when database is empty
@@ -56,6 +57,7 @@ const Index = () => {
   const { data: gallery = [], isLoading: loadingGallery } = useGallery();
   const { data: testimonials = [], isLoading: loadingTestimonials } = useTestimonials();
   const { data: courses = [], isLoading: loadingCourses } = useCoursesWithStats({ status: "published" });
+  const { trackClick } = useAnalytics();
 
   const isLoading =
     loadingContent || loadingServices || loadingProducts || loadingGallery || loadingTestimonials || loadingCourses;
@@ -174,19 +176,21 @@ const Index = () => {
         content={heroContent}
         whatsapp={contactContent.whatsapp}
         whatsappMessage={contactContent.whatsappMessage}
+        onTrackClick={trackClick}
       />
       <AboutSection content={aboutContent} />
-      <ServicesSection services={servicesForComponent} whatsapp={contactContent.whatsapp} />
-      <ProductsSection products={productsForComponent} whatsapp={contactContent.whatsapp} />
+      <ServicesSection services={servicesForComponent} whatsapp={contactContent.whatsapp} onTrackClick={trackClick} />
+      <ProductsSection products={productsForComponent} whatsapp={contactContent.whatsapp} onTrackClick={trackClick} />
       <CoursesSection
         title={content.courses_section?.title || defaultContent.courses_section.title}
         subtitle={content.courses_section?.subtitle || defaultContent.courses_section.subtitle}
         courses={coursesForComponent}
         whatsapp={contactContent.whatsapp}
+        onTrackClick={trackClick}
       />
       <GallerySection gallery={galleryForComponent} />
       <TestimonialsSection testimonials={testimonialsForComponent} />
-      <ContactSection content={contactContent} />
+      <ContactSection content={contactContent} onTrackClick={trackClick} />
       <Footer content={footerContent} />
       <FloatingWhatsApp phone={contactContent.whatsapp} message={contactContent.whatsappMessage} />
     </div>

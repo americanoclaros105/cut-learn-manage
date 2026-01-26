@@ -8,9 +8,10 @@ import { openWhatsApp } from '@/lib/whatsapp';
 interface ServicesSectionProps {
   services: ServiceItem[];
   whatsapp: string;
+  onTrackClick?: (section: string, type: string, label?: string) => void;
 }
 
-export const ServicesSection = ({ services, whatsapp }: ServicesSectionProps) => {
+export const ServicesSection = ({ services, whatsapp, onTrackClick }: ServicesSectionProps) => {
   const [showAll, setShowAll] = useState(false);
 
   const displayedServices = showAll ? services : services.slice(0, 4);
@@ -55,7 +56,10 @@ export const ServicesSection = ({ services, whatsapp }: ServicesSectionProps) =>
                   </div>
                 </div>
                 <Button
-                  onClick={() => openWhatsApp(whatsapp, service.name, 'servicio')}
+                  onClick={() => {
+                    onTrackClick?.('services', 'button', service.name);
+                    openWhatsApp(whatsapp, service.name, 'servicio');
+                  }}
                   className="w-full h-11 bg-green-500 hover:bg-green-600 text-white gap-2 mt-auto"
                 >
                   <i className="fab fa-whatsapp text-lg" />

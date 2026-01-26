@@ -11,6 +11,7 @@ import { cn } from '@/lib/utils';
 
 interface ContactSectionProps {
   content: LandingContent['contact'];
+  onTrackClick?: (section: string, type: string, label?: string) => void;
 }
 
 // Validation schema
@@ -36,7 +37,7 @@ const contactSchema = z.object({
 
 type FormErrors = Partial<Record<keyof z.infer<typeof contactSchema>, string>>;
 
-export const ContactSection = ({ content }: ContactSectionProps) => {
+export const ContactSection = ({ content, onTrackClick }: ContactSectionProps) => {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -99,6 +100,7 @@ export const ContactSection = ({ content }: ContactSectionProps) => {
 💬 *Mensaje:*
 ${message}`;
 
+    onTrackClick?.('contact', 'form', 'Enviar Mensaje');
     const phone = content.whatsapp.replace(/\D/g, '');
     const encodedMessage = encodeURIComponent(whatsappMessage);
     window.open(`https://api.whatsapp.com/send?phone=+${phone}&text=${encodedMessage}`, '_blank');
@@ -110,6 +112,7 @@ ${message}`;
   };
 
   const handleWhatsAppClick = () => {
+    onTrackClick?.('contact', 'button', 'WhatsApp');
     const message = encodeURIComponent(content.whatsappMessage);
     const phone = content.whatsapp.replace(/\D/g, '');
     window.open(`https://api.whatsapp.com/send?phone=+${phone}&text=${message}`, '_blank');

@@ -16,6 +16,7 @@ interface CoursesSectionProps {
   subtitle: string;
   courses: CourseWithStats[];
   whatsapp: string;
+  onTrackClick?: (section: string, type: string, label?: string) => void;
 }
 
 type LevelFilter = 'all' | 'beginner' | 'intermediate' | 'advanced';
@@ -47,7 +48,7 @@ const sortOptions: { value: SortOption; label: string; icon: typeof Calendar }[]
   { value: 'price-high', label: 'Mayor precio', icon: DollarSign },
 ];
 
-export const CoursesSection = ({ title, subtitle, courses, whatsapp }: CoursesSectionProps) => {
+export const CoursesSection = ({ title, subtitle, courses, whatsapp, onTrackClick }: CoursesSectionProps) => {
   const [expandedDescriptions, setExpandedDescriptions] = useState<Record<string, boolean>>({});
   const [showAllCourses, setShowAllCourses] = useState(false);
   const [levelFilter, setLevelFilter] = useState<LevelFilter>('all');
@@ -290,7 +291,10 @@ export const CoursesSection = ({ title, subtitle, courses, whatsapp }: CoursesSe
                       </div>
 
                       <Button
-                        onClick={() => openWhatsApp(whatsapp, course.title, 'curso')}
+                        onClick={() => {
+                          onTrackClick?.('courses', 'button', course.title);
+                          openWhatsApp(whatsapp, course.title, 'curso');
+                        }}
                         className="w-full h-11 bg-green-600 hover:bg-green-700 text-white gap-2 mt-auto font-medium"
                       >
                         <i className="fab fa-whatsapp text-lg" />

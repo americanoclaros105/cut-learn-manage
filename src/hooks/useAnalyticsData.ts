@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { startOfDay, startOfWeek, startOfMonth, subHours, endOfDay } from 'date-fns';
@@ -50,11 +50,14 @@ const getDateRange = (filters: AnalyticsFilters) => {
 };
 
 export const useAnalyticsData = (filters: AnalyticsFilters) => {
-  // Memoize date range to prevent queryKey from changing on every render
-  const { start, end } = useMemo(
-    () => getDateRange(filters),
-    [filters.timeFilter, filters.startDate?.getTime(), filters.endDate?.getTime()]
-  );
+  // Use useState to capture "now" once per filter change, preventing infinite re-fetches
+  const [refreshKey, setRefreshKey] = useState(0);
+  
+  // Memoize date range - only recalculate when filter or refreshKey changes
+  const { start, end } = useMemo(() => {
+    return getDateRange(filters);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filters.timeFilter, filters.startDate?.getTime(), filters.endDate?.getTime(), refreshKey]);
 
   // Query for page views
   const pageViewsQuery = useQuery({
@@ -128,6 +131,8 @@ export const useAnalyticsData = (filters: AnalyticsFilters) => {
     {} as Record<string, number>
   );
 
+  const refresh = () => setRefreshKey((k) => k + 1);
+
   return {
     pageViews,
     clicks,
@@ -139,5 +144,6 @@ export const useAnalyticsData = (filters: AnalyticsFilters) => {
     detailedClicks,
     isLoading: pageViewsQuery.isLoading || clicksQuery.isLoading,
     error: pageViewsQuery.error || clicksQuery.error,
+    refresh,
   };
 };

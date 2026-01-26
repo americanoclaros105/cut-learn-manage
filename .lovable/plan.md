@@ -1,99 +1,62 @@
 
-# Corrección del Dashboard de Analytics que se queda cargando
+## Objetivo
+Arreglar el Dashboard de Analytics que se queda cargando infinito y no muestra métricas.
 
-## Problema Identificado
+## Qué está pasando (causa real)
+En `useAnalyticsData.ts` la función `getDateRange()` crea un `now = new Date()` en cada render.
 
-El dashboard de Analytics se queda mostrando el spinner de carga indefinidamente aunque las requests a la base de datos retornan correctamente con Status 200 y datos válidos.
+Como el `queryKey` de React Query incluye `end.toISOString()`, y `end` es “ahora”, ese valor cambia en milisegundos en cada render.
 
-## Causa Raíz
+Resultado:
+- React Query cree que es “una query nueva” todo el tiempo
+- dispara requests en bucle con `created_at=lte...` cambiando (se ve en los network logs: varias llamadas seguidas con `.672Z`, `.895Z`, `.109Z`, `.326Z`, etc.)
+- `isLoading` vuelve a `true` constantemente → el spinner nunca termina
 
-Después de analizar el código y las network requests, he identificado varios problemas potenciales:
+## Solución técnica
+Hacer que el rango de fechas (start/end) sea estable entre renders mientras el filtro no cambie.
 
-1. **Problema con `isLoading` en React Query**: El hook está calculando `isLoading` basándose en ambas queries (`pageViewsQuery.isLoading || clicksQuery.isLoading`), pero si una query falla o queda en estado pendiente, todo el dashboard queda bloqueado.
+La forma más simple (sin cambiar la API del hook) es:
+- Memorizar el resultado de `getDateRange(filters)` con `useMemo`
+- Usar como dependencias SOLO: `timeFilter`, `startDate`, `endDate` (no el objeto entero `filters`)
+- Así, “now” queda congelado para ese filtro hasta que el usuario cambie el filtro/fechas
 
-2. **Falta de manejo de errores**: Si alguna query tiene un error, no se muestra ningún mensaje y el componente sigue mostrando el loader.
+## Cambios a implementar
 
-3. **QueryKey cambiante**: Las fechas en el `queryKey` cambian constantemente (porque `new Date()` genera un timestamp diferente cada vez), lo que podría causar re-fetches infinitos.
+### 1) `src/hooks/useAnalyticsData.ts`
+**Cambios:**
+- Importar `useMemo` de React
+- Reemplazar:
+  - `const { start, end } = getDateRange(filters);`
+- Por:
+  - `const { start, end } = useMemo(() => getDateRange(filters), [filters.timeFilter, filters.startDate?.getTime(), filters.endDate?.getTime()]);`
 
-## Solución Propuesta
+**Por qué funciona:**
+- `getDateRange()` solo se recalcula cuando el usuario cambia el filtro o las fechas.
+- `queryKey` se queda estable, React Query deja de recrear queries infinitamente y `isLoading` pasa a `false` cuando llega la data.
 
-### 1. Mejorar el hook `useAnalyticsData.ts`
+### 2) (Opcional recomendado) `src/components/admin/AnalyticsDashboard.tsx`
+Ahora que el rango se estabiliza, el “Hoy / Semana / Mes” quedará calculado hasta que cambies el filtro (no “en tiempo real” cada segundo). Para que sea más usable:
+- Agregar un botón “Actualizar” (refresh) que:
+  - fuerce a React Query a refetch (`queryClient.invalidateQueries({ queryKey: ['analytics'] })`) o
+  - actualice un `refreshKey` local que se use como dependencia extra para recalcular el rango
 
-- Agregar `staleTime` y `refetchOnWindowFocus: false` para evitar re-fetches innecesarios
-- Usar `isSuccess` además de `isLoading` para mejor control
-- Manejar errores adecuadamente
+Esto es opcional; lo crítico para quitar el loading infinito es el punto 1.
 
-### 2. Mejorar el componente `AnalyticsDashboard.tsx`
+## Cómo validaremos que quedó bien
+1. Entrar a `/admin`
+2. Ver que el spinner desaparece y aparecen las tarjetas (Visitas, Únicos, Clicks, Engagement)
+3. Abrir Network:
+   - Debe haber 1 request por `page_views` y 1 por `section_clicks` al cargar
+   - No debe haber spam infinito de requests con `created_at=lte` cambiando cada milisegundo
+4. Cambiar el filtro (Hora/Día/Semana/Mes/Personalizado) y confirmar que:
+   - se hace un nuevo request solo una vez por cambio
+   - el dashboard responde y no se queda cargando
 
-- Agregar manejo de errores con mensaje visual
-- Mostrar estado vacío cuando no hay datos en lugar de loading infinito
-- Agregar un botón de refresh manual
+## Nota adicional (no bloqueante)
+En consola aparece un warning de “Function components cannot be given refs…”. No rompe el dashboard, pero después podemos revisarlo para limpiar warnings (probablemente algún componente UI que está recibiendo `ref` sin `forwardRef`).
 
-## Cambios a Realizar
-
-### Archivo: `src/hooks/useAnalyticsData.ts`
-
-```typescript
-// Agregar configuración de staleTime y refetchOnWindowFocus
-const pageViewsQuery = useQuery({
-  queryKey: ['analytics', 'pageViews', filters.timeFilter, start.toISOString(), end.toISOString()],
-  queryFn: async () => {
-    const { data, error } = await supabase
-      .from('page_views')
-      .select('*')
-      .gte('created_at', start.toISOString())
-      .lte('created_at', end.toISOString())
-      .order('created_at', { ascending: true });
-
-    if (error) throw error;
-    return data as PageView[];
-  },
-  staleTime: 30000, // 30 segundos
-  refetchOnWindowFocus: false,
-});
-
-// Lo mismo para clicksQuery
-```
-
-### Archivo: `src/components/admin/AnalyticsDashboard.tsx`
-
-```typescript
-// Importar error del hook
-const {
-  pageViews,
-  uniqueVisitors,
-  totalClicks,
-  engagementRate,
-  deviceBreakdown,
-  sectionBreakdown,
-  detailedClicks,
-  isLoading,
-  error, // Agregar esto
-} = useAnalyticsData({...});
-
-// Agregar manejo de errores después del loading check
-if (error) {
-  return (
-    <Card className="border-0 shadow-lg">
-      <CardContent className="flex flex-col items-center justify-center py-12 gap-4">
-        <p className="text-destructive">Error al cargar analytics</p>
-        <Button onClick={() => window.location.reload()}>Reintentar</Button>
-      </CardContent>
-    </Card>
-  );
-}
-```
-
-## Resumen de Archivos
-
-| Archivo | Cambio |
-|---------|--------|
-| `src/hooks/useAnalyticsData.ts` | Agregar `staleTime`, `refetchOnWindowFocus`, y mejor manejo de errores |
-| `src/components/admin/AnalyticsDashboard.tsx` | Agregar manejo visual de errores y botón de refresh |
-
-## Beneficios
-
-- El dashboard no se quedará cargando indefinidamente
-- Los usuarios verán mensajes de error claros si algo falla
-- Las queries serán más estables y no causarán re-fetches innecesarios
-- Mejor experiencia de usuario con posibilidad de reintentar
+## Siguientes mejoras sugeridas (después de arreglar el loading)
+- Botón “Actualizar” y/o auto-refresh cada 60s para “Hoy/Semana/Mes”
+- Tracking de Gallery y Testimonials (clicks en navegación/slide)
+- Métrica de “elementos más llamativos” (Top por sección + label, ya tenemos la tabla; se puede sumar un ranking global)
+- Exportar CSV desde el dashboard para reportes

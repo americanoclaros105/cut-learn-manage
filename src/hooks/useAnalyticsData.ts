@@ -65,6 +65,8 @@ export const useAnalyticsData = (filters: AnalyticsFilters) => {
       if (error) throw error;
       return data as PageView[];
     },
+    staleTime: 30000,
+    refetchOnWindowFocus: false,
   });
 
   // Query for section clicks
@@ -80,6 +82,8 @@ export const useAnalyticsData = (filters: AnalyticsFilters) => {
       if (error) throw error;
       return data as SectionClick[];
     },
+    staleTime: 30000,
+    refetchOnWindowFocus: false,
   });
 
   // Calculate metrics

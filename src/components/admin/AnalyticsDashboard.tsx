@@ -70,6 +70,7 @@ export const AnalyticsDashboard = () => {
     sectionBreakdown,
     detailedClicks,
     isLoading,
+    error,
   } = useAnalyticsData({
     timeFilter,
     startDate,
@@ -169,6 +170,17 @@ export const AnalyticsDashboard = () => {
       <Card className="border-0 shadow-lg">
         <CardContent className="flex items-center justify-center py-12">
           <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (error) {
+    return (
+      <Card className="border-0 shadow-lg">
+        <CardContent className="flex flex-col items-center justify-center py-12 gap-4">
+          <p className="text-destructive">Error al cargar analytics</p>
+          <Button onClick={() => window.location.reload()}>Reintentar</Button>
         </CardContent>
       </Card>
     );

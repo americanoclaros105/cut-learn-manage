@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCourseWithModules, Lesson } from '@/hooks/useCourses';
@@ -6,10 +6,9 @@ import { useCourseProgress, useMarkLessonComplete, useUserAssignedCourses } from
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { Lock, Loader2, ArrowLeft } from 'lucide-react';
-import { CourseHeader } from '@/components/student/course/CourseHeader';
-import { CourseSidebar } from '@/components/student/course/CourseSidebar';
-import { LessonContent } from '@/components/student/course/LessonContent';
-import { MobileCourseSidebar } from '@/components/student/course/MobileCourseSidebar';
+import { CoursePlayerHeader } from '@/components/student/course/CoursePlayerHeader';
+import { CoursePlayerLayout } from '@/components/student/course/CoursePlayerLayout';
+import { LessonPlayer } from '@/components/student/course/LessonPlayer';
 
 export const CourseViewer = () => {
   const { courseId } = useParams();
@@ -24,7 +23,7 @@ export const CourseViewer = () => {
   const [currentLesson, setCurrentLesson] = useState<Lesson | null>(null);
   const [currentModuleIndex, setCurrentModuleIndex] = useState(0);
   const [currentLessonIndex, setCurrentLessonIndex] = useState(0);
-  const [showHeader, setShowHeader] = useState(true);
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
 
   const hasAccess = courseId ? assignedCourses.includes(courseId) : false;
   const completedLessons = progressData.map((p) => p.lesson_id);
@@ -46,12 +45,19 @@ export const CourseViewer = () => {
     }
   }, [course]);
 
+  const getAllLessons = useCallback(() => {
+    if (!course || !course.modules) return [];
+    return course.modules.flatMap((m, mIndex) =>
+      (m.lessons || []).map((l, lIndex) => ({ ...l, moduleIndex: mIndex, lessonIndex: lIndex }))
+    );
+  }, [course]);
+
   useEffect(() => {
     if (course && course.modules && course.modules.length > 0 && course.modules[0].lessons?.length > 0) {
       // Find first incomplete lesson or default to first
       const allLessons = getAllLessons();
       const firstIncomplete = allLessons.find((l) => !completedLessons.includes(l.id));
-      
+
       if (firstIncomplete) {
         setCurrentModuleIndex(firstIncomplete.moduleIndex);
         setCurrentLessonIndex(firstIncomplete.lessonIndex);
@@ -60,24 +66,18 @@ export const CourseViewer = () => {
         setCurrentLesson(course.modules[0].lessons[0]);
       }
     }
-  }, [course, completedLessons.length]);
+  }, [course, completedLessons.length, getAllLessons]);
 
-  const getAllLessons = () => {
-    if (!course || !course.modules) return [];
-    return course.modules.flatMap((m, mIndex) =>
-      (m.lessons || []).map((l, lIndex) => ({ ...l, moduleIndex: mIndex, lessonIndex: lIndex }))
-    );
-  };
-
-  const handleLessonClick = (moduleIndex: number, lessonIndex: number) => {
+  const handleLessonClick = useCallback((moduleIndex: number, lessonIndex: number) => {
     if (!course || !course.modules) return;
     const lesson = course.modules[moduleIndex].lessons?.[lessonIndex];
     if (lesson) {
       setCurrentModuleIndex(moduleIndex);
       setCurrentLessonIndex(lessonIndex);
       setCurrentLesson(lesson);
+      setIsMobileSidebarOpen(false);
     }
-  };
+  }, [course]);
 
   const handleMarkComplete = async () => {
     if (!currentLesson || !courseId) return;
@@ -100,23 +100,23 @@ export const CourseViewer = () => {
     }
   };
 
-  const handlePrevious = () => {
+  const handlePrevious = useCallback(() => {
     const allLessons = getAllLessons();
     const currentIndex = allLessons.findIndex((l) => l.id === currentLesson?.id);
     if (currentIndex > 0) {
       const prev = allLessons[currentIndex - 1];
       handleLessonClick(prev.moduleIndex, prev.lessonIndex);
     }
-  };
+  }, [getAllLessons, currentLesson, handleLessonClick]);
 
-  const handleNext = () => {
+  const handleNext = useCallback(() => {
     const allLessons = getAllLessons();
     const currentIndex = allLessons.findIndex((l) => l.id === currentLesson?.id);
     if (currentIndex < allLessons.length - 1) {
       const next = allLessons[currentIndex + 1];
       handleLessonClick(next.moduleIndex, next.lessonIndex);
     }
-  };
+  }, [getAllLessons, currentLesson, handleLessonClick]);
 
   const isLessonCompleted = (lessonId: string) => completedLessons.includes(lessonId);
 
@@ -181,64 +181,39 @@ export const CourseViewer = () => {
 
   return (
     <div className="flex flex-col h-screen bg-background overflow-hidden">
-      {/* Mobile Header with Sidebar Toggle */}
-      <div className="lg:hidden flex items-center justify-between p-3 border-b bg-card">
-        <MobileCourseSidebar
-          modules={course.modules || []}
-          currentLesson={currentLesson}
-          completedLessons={completedLessons}
-          onLessonClick={handleLessonClick}
-        />
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => setShowHeader(!showHeader)}
-          className="text-xs"
-        >
-          {showHeader ? 'Ocultar info' : 'Ver info'}
-        </Button>
-      </div>
+      {/* Compact Sticky Header */}
+      <CoursePlayerHeader
+        course={course}
+        progressPercentage={getProgressPercentage()}
+        completedCount={completedLessons.length}
+        totalLessons={getTotalLessons()}
+        isSidebarOpen={isMobileSidebarOpen}
+        onToggleSidebar={() => setIsMobileSidebarOpen(!isMobileSidebarOpen)}
+      />
 
-      {/* Course Header - Collapsible on mobile */}
-      <div className={`transition-all duration-300 ${!showHeader && 'hidden lg:block'}`}>
-        <CourseHeader
-          course={course}
-          progressPercentage={getProgressPercentage()}
-          totalLessons={getTotalLessons()}
-          completedCount={completedLessons.length}
-        />
-      </div>
-
-      {/* Main Content Area */}
-      <div className="flex-1 flex overflow-hidden">
-        {/* Desktop Sidebar */}
-        <div className="hidden lg:flex">
-          <CourseSidebar
-            modules={course.modules || []}
-            currentLesson={currentLesson}
-            completedLessons={completedLessons}
-            onLessonClick={handleLessonClick}
-          />
-        </div>
-
-        {/* Lesson Content */}
-        <main className="flex-1 flex flex-col overflow-hidden">
-          <LessonContent
-            lesson={currentLesson}
-            moduleIndex={currentModuleIndex}
-            lessonIndex={currentLessonIndex}
-            isCompleted={isLessonCompleted(currentLesson.id)}
-            isMarkingComplete={markComplete.isPending}
-            onMarkComplete={handleMarkComplete}
-            onPrevious={handlePrevious}
-            onNext={handleNext}
-            hasPrevious={getCurrentPosition() > 1}
-            hasNext={getCurrentPosition() < getTotalLessons()}
-            currentPosition={getCurrentPosition()}
-            totalLessons={getTotalLessons()}
-          />
-        </main>
-      </div>
+      {/* Main Layout with Content + Sidebar */}
+      <CoursePlayerLayout
+        modules={course.modules || []}
+        currentLesson={currentLesson}
+        completedLessons={completedLessons}
+        onLessonClick={handleLessonClick}
+        onPrevious={handlePrevious}
+        onNext={handleNext}
+        onMarkComplete={handleMarkComplete}
+        hasPrevious={getCurrentPosition() > 1}
+        hasNext={getCurrentPosition() < getTotalLessons()}
+        isCompleted={isLessonCompleted(currentLesson.id)}
+        isMarkingComplete={markComplete.isPending}
+        currentPosition={getCurrentPosition()}
+        totalLessons={getTotalLessons()}
+        progressPercentage={getProgressPercentage()}
+        moduleIndex={currentModuleIndex}
+        lessonIndex={currentLessonIndex}
+        isMobileSidebarOpen={isMobileSidebarOpen}
+        onCloseMobileSidebar={() => setIsMobileSidebarOpen(false)}
+      >
+        <LessonPlayer lesson={currentLesson} />
+      </CoursePlayerLayout>
     </div>
   );
 };

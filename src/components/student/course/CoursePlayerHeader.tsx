@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Menu, X } from 'lucide-react';
+import { ArrowLeft, Menu, X, Award } from 'lucide-react';
 import { ProgressRing } from './ProgressRing';
 import { Course } from '@/hooks/useCourses';
 import { cn } from '@/lib/utils';
@@ -13,6 +13,8 @@ interface CoursePlayerHeaderProps {
   totalLessons: number;
   isSidebarOpen?: boolean;
   onToggleSidebar?: () => void;
+  isCourseComplete?: boolean;
+  onShowCertificate?: () => void;
 }
 
 export const CoursePlayerHeader = ({
@@ -22,6 +24,8 @@ export const CoursePlayerHeader = ({
   totalLessons,
   isSidebarOpen,
   onToggleSidebar,
+  isCourseComplete,
+  onShowCertificate,
 }: CoursePlayerHeaderProps) => {
   const navigate = useNavigate();
 
@@ -69,8 +73,27 @@ export const CoursePlayerHeader = ({
         </div>
       </div>
 
-      {/* Right: Progress ring + Menu toggle */}
+      {/* Right: Progress ring + Certificate + Menu toggle */}
       <div className="flex items-center gap-2 shrink-0">
+        {/* Certificate button - show when course is complete */}
+        {isCourseComplete && onShowCertificate && (
+          <motion.div
+            initial={{ scale: 0, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+          >
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onShowCertificate}
+              className="gap-1.5 h-8 px-2 sm:px-3 border-primary/50 text-primary hover:bg-primary/10"
+            >
+              <Award className="w-4 h-4" />
+              <span className="hidden sm:inline text-xs">Certificado</span>
+            </Button>
+          </motion.div>
+        )}
+
         <ProgressRing
           progress={progressPercentage}
           size={36}

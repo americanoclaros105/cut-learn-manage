@@ -9,6 +9,7 @@ import { Lock, Loader2, ArrowLeft } from 'lucide-react';
 import { CoursePlayerHeader } from '@/components/student/course/CoursePlayerHeader';
 import { CoursePlayerLayout } from '@/components/student/course/CoursePlayerLayout';
 import { LessonPlayer } from '@/components/student/course/LessonPlayer';
+import { CourseCertificate } from '@/components/student/course/CourseCertificate';
 import { fireCourseCompleteConfetti, fireSuccessConfetti } from '@/lib/confetti';
 
 export const CourseViewer = () => {
@@ -25,6 +26,7 @@ export const CourseViewer = () => {
   const [currentModuleIndex, setCurrentModuleIndex] = useState(0);
   const [currentLessonIndex, setCurrentLessonIndex] = useState(0);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+  const [showCertificate, setShowCertificate] = useState(false);
   const hasCelebratedRef = useRef(false);
 
   const hasAccess = courseId ? assignedCourses.includes(courseId) : false;
@@ -97,9 +99,18 @@ export const CourseViewer = () => {
         hasCelebratedRef.current = true;
         fireCourseCompleteConfetti();
         toast.success('🎉 ¡Felicidades! Has completado el curso', {
-          description: '¡Excelente trabajo! Has terminado todas las lecciones.',
+          description: '¡Ya puedes descargar tu certificado!',
           duration: 5000,
+          action: {
+            label: 'Ver certificado',
+            onClick: () => setShowCertificate(true),
+          },
         });
+        
+        // Show certificate modal after a short delay
+        setTimeout(() => {
+          setShowCertificate(true);
+        }, 2000);
       } else {
         // Just a regular lesson completion
         fireSuccessConfetti();
@@ -155,6 +166,8 @@ export const CourseViewer = () => {
     return allLessons.findIndex((l) => l.id === currentLesson?.id) + 1;
   };
 
+  const isCourseComplete = getProgressPercentage() === 100;
+
   // Loading state
   if (loadingCourse || loadingAssigned || loadingProgress) {
     return (
@@ -208,6 +221,8 @@ export const CourseViewer = () => {
         totalLessons={getTotalLessons()}
         isSidebarOpen={isMobileSidebarOpen}
         onToggleSidebar={() => setIsMobileSidebarOpen(!isMobileSidebarOpen)}
+        isCourseComplete={isCourseComplete}
+        onShowCertificate={() => setShowCertificate(true)}
       />
 
       {/* Main Layout with Content + Sidebar */}
@@ -233,6 +248,16 @@ export const CourseViewer = () => {
       >
         <LessonPlayer lesson={currentLesson} />
       </CoursePlayerLayout>
+
+      {/* Certificate Modal */}
+      <CourseCertificate
+        isOpen={showCertificate}
+        onClose={() => setShowCertificate(false)}
+        studentName={user?.name || 'Estudiante'}
+        courseName={course.title}
+        completionDate={new Date()}
+        totalLessons={getTotalLessons()}
+      />
     </div>
   );
 };

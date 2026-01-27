@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCourseWithModules, Lesson } from '@/hooks/useCourses';
@@ -9,6 +9,7 @@ import { Lock, Loader2, ArrowLeft } from 'lucide-react';
 import { CoursePlayerHeader } from '@/components/student/course/CoursePlayerHeader';
 import { CoursePlayerLayout } from '@/components/student/course/CoursePlayerLayout';
 import { LessonPlayer } from '@/components/student/course/LessonPlayer';
+import { fireCourseCompleteConfetti, fireSuccessConfetti } from '@/lib/confetti';
 
 export const CourseViewer = () => {
   const { courseId } = useParams();
@@ -24,6 +25,7 @@ export const CourseViewer = () => {
   const [currentModuleIndex, setCurrentModuleIndex] = useState(0);
   const [currentLessonIndex, setCurrentLessonIndex] = useState(0);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+  const hasCelebratedRef = useRef(false);
 
   const hasAccess = courseId ? assignedCourses.includes(courseId) : false;
   const completedLessons = progressData.map((p) => p.lesson_id);
@@ -84,16 +86,33 @@ export const CourseViewer = () => {
 
     try {
       await markComplete.mutateAsync({ lessonId: currentLesson.id, courseId });
-      toast.success('¡Lección completada!', {
-        description: 'Tu progreso ha sido guardado',
-      });
-
-      // Auto-advance to next lesson
+      
+      // Check if this was the last lesson to complete the course
       const allLessons = getAllLessons();
-      const currentIndex = allLessons.findIndex((l) => l.id === currentLesson.id);
-      if (currentIndex < allLessons.length - 1) {
-        const next = allLessons[currentIndex + 1];
-        handleLessonClick(next.moduleIndex, next.lessonIndex);
+      const newCompletedCount = completedLessons.length + 1;
+      const totalLessonsCount = allLessons.length;
+      
+      if (newCompletedCount === totalLessonsCount && !hasCelebratedRef.current) {
+        // Course completed! 🎉
+        hasCelebratedRef.current = true;
+        fireCourseCompleteConfetti();
+        toast.success('🎉 ¡Felicidades! Has completado el curso', {
+          description: '¡Excelente trabajo! Has terminado todas las lecciones.',
+          duration: 5000,
+        });
+      } else {
+        // Just a regular lesson completion
+        fireSuccessConfetti();
+        toast.success('¡Lección completada!', {
+          description: 'Tu progreso ha sido guardado',
+        });
+        
+        // Auto-advance to next lesson
+        const currentIndex = allLessons.findIndex((l) => l.id === currentLesson.id);
+        if (currentIndex < allLessons.length - 1) {
+          const next = allLessons[currentIndex + 1];
+          handleLessonClick(next.moduleIndex, next.lessonIndex);
+        }
       }
     } catch (error) {
       toast.error('Error al marcar la lección');

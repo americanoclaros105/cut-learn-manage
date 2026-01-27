@@ -1,69 +1,57 @@
 
 
-# Cambiar Título de Sección de Cursos
+# Actualizar Subtítulo de Sección de Cursos
 
 ## Cambio Solicitado
-Cambiar el título de la sección de cursos de "Academia de Barbería" a "Cursos".
 
-## Ubicación del Cambio
+Cambiar el subtítulo de la sección de cursos a algo más genérico, no enfocado solo en barbería.
 
-El título se puede configurar de dos formas:
+## Valor Actual
 
-1. **Valor por defecto en código** (cuando no hay datos en BD)
-2. **Valor en base de datos** (configurado desde Editor de Landing)
+```
+"Aprende de los mejores profesionales y domina el arte de la barbería"
+```
+
+## Nuevo Valor Propuesto
+
+```
+"Aprende de los mejores profesionales"
+```
+
+Este subtítulo es más versátil y aplica a cualquier tipo de curso que se ofrezca en la plataforma.
 
 ## Cambios a Implementar
 
-### Archivo: `src/pages/Index.tsx`
+### 1. Base de Datos
 
-Cambiar el valor por defecto del título de la sección de cursos:
+Actualizar el campo `courses_section.subtitle` en la tabla `landing_content`:
 
-```typescript
-// Antes
-courses_section: {
-  title: "Academia",
-  subtitle: "Aprende de los mejores profesionales",
-},
-
-// Después
-courses_section: {
-  title: "Cursos",
-  subtitle: "Aprende de los mejores profesionales",
-},
+```sql
+UPDATE landing_content 
+SET courses_section = jsonb_set(
+  courses_section, 
+  '{subtitle}', 
+  '"Aprende de los mejores profesionales"'
+)
+WHERE id = '802f7818-72fb-42e8-8bc0-49986cde0d5b'
 ```
 
-### Archivo: `src/pages/admin/LandingEditor.tsx`
+### 2. Código - Valores por Defecto
 
-Actualizar también el valor por defecto para consistencia:
-
-```typescript
-// Antes
-courses_section: {
-  title: 'Academia',
-  subtitle: 'Aprende de los mejores profesionales',
-},
-
-// Después
-courses_section: {
-  title: 'Cursos',
-  subtitle: 'Aprende de los mejores profesionales',
-},
-```
-
-## Nota Importante
-
-Si el valor "Academia de Barbería" está guardado en tu base de datos, deberás:
-
-1. Ir al panel de administración (`/admin`)
-2. Entrar al Editor de Landing
-3. Buscar la sección de configuración de cursos (si existe) y cambiar el título manualmente
-
-O bien, puedo actualizar directamente el valor en la base de datos si lo prefieres.
-
-## Resumen
+Actualizar los valores por defecto en dos archivos para mantener consistencia:
 
 | Archivo | Cambio |
 |---------|--------|
-| `src/pages/Index.tsx` | Cambiar `title: "Academia"` → `title: "Cursos"` |
-| `src/pages/admin/LandingEditor.tsx` | Cambiar `title: 'Academia'` → `title: 'Cursos'` |
+| `src/pages/Index.tsx` | Línea 31: Cambiar subtítulo en `defaultContent.courses_section` |
+| `src/pages/admin/LandingEditor.tsx` | Línea 38: Cambiar subtítulo en `defaultContent.courses_section` |
+
+## Resumen de Cambios
+
+| Ubicación | Antes | Después |
+|-----------|-------|---------|
+| Base de datos | "Aprende de los mejores profesionales y domina el arte de la barbería" | "Aprende de los mejores profesionales" |
+| Index.tsx (default) | "Aprende de los mejores profesionales" | Sin cambio (ya está correcto) |
+| LandingEditor.tsx (default) | "Aprende de los mejores profesionales" | Sin cambio (ya está correcto) |
+
+Los valores por defecto en el código ya tienen el texto genérico. Solo necesitamos actualizar la base de datos.
 

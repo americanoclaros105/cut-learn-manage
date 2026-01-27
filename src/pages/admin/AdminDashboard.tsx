@@ -52,14 +52,14 @@ export const AdminDashboard = () => {
 
   if (loadingCourses || loadingStudents) {
     return (
-      <div className="p-8 flex items-center justify-center min-h-[50vh]">
+      <div className="p-4 md:p-8 flex items-center justify-center min-h-[50vh]">
         <Loader2 className="w-8 h-8 animate-spin" />
       </div>
     );
   }
 
   return (
-    <div className="p-8">
+    <div className="p-4 md:p-8">
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-foreground">Dashboard</h1>
         <p className="text-muted-foreground">Vista general del sistema</p>

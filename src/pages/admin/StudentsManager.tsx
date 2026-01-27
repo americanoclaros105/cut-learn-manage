@@ -185,14 +185,14 @@ export const StudentsManager = () => {
 
   if (loadingStudents || loadingCourses) {
     return (
-      <div className="p-8 flex items-center justify-center min-h-[50vh]">
+      <div className="p-4 md:p-8 flex items-center justify-center min-h-[50vh]">
         <Loader2 className="w-8 h-8 animate-spin" />
       </div>
     );
   }
 
   return (
-    <div className="p-8">
+    <div className="p-4 md:p-8">
       {/* Header */}
       <div className="flex justify-between items-start mb-8">
         <div>

@@ -120,4 +120,42 @@
   .container-custom {
     @apply max-w-7xl mx-auto;
   }
+
+  /* Glassmorphism for sticky headers */
+  .glass-header {
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    background: hsl(var(--background) / 0.85);
+  }
+
+  /* Safe area padding for mobile bottom navigation */
+  .safe-area-bottom {
+    padding-bottom: env(safe-area-inset-bottom, 0);
+  }
+
+  /* Lesson content enter animation */
+  .lesson-enter {
+    animation: lessonSlideUp 0.3s ease-out;
+  }
+
+  @keyframes lessonSlideUp {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  /* Extra small breakpoint helper */
+  @media (min-width: 375px) {
+    .xs\:flex {
+      display: flex;
+    }
+    .xs\:inline {
+      display: inline;
+    }
+  }
 }

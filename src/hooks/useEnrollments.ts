@@ -94,7 +94,12 @@ export const useEnrollStudent = () => {
 export interface UpdateEnrollmentInput {
   id: string;
   courseId: string;
-  patch: { agreed_price?: number; status?: EnrollmentStatus };
+  patch: {
+    agreed_price?: number;
+    status?: EnrollmentStatus;
+    enabled_from?: string | null;
+    expires_at?: string | null;
+  };
 }
 
 /**
@@ -117,4 +122,11 @@ export const useUpdateEnrollment = () => {
     },
     onSuccess: (_data, { courseId }) => invalidateOperations(queryClient, courseId),
   });
+};
+
+/** Enrollment ids of a student keyed by course, e.g. right after creating the account. */
+export const fetchEnrollmentIdsByCourse = async (userId: string): Promise<Record<string, string>> => {
+  const { data, error } = await supabase.from('user_course_assignments').select('id, course_id').eq('user_id', userId);
+  if (error) throw error;
+  return Object.fromEntries((data || []).map((e) => [e.course_id, e.id]));
 };

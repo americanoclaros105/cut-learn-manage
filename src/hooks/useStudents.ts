@@ -122,9 +122,11 @@ export const useStudent = (studentId: string) => {
         .from('profiles')
         .select('*')
         .eq('id', studentId)
-        .single();
+        .maybeSingle();
       
       if (profileError) throw profileError;
+      // Unknown id: the student page renders its not-found state.
+      if (!profile) return null;
 
       const { data: assignments, error: assignmentsError } = await supabase
         .from('user_course_assignments')

@@ -19,4 +19,6 @@ export const invalidateOperations = (queryClient: QueryClient, courseId?: string
   queryClient.invalidateQueries({ queryKey: ['payments'] });
   queryClient.invalidateQueries({ queryKey: operationsKeys.receivables });
   queryClient.invalidateQueries({ queryKey: ['students'] });
+  // Student detail page (profile, enrollments, payments, attendance of one student).
+  queryClient.invalidateQueries({ queryKey: ['student'] });
 };

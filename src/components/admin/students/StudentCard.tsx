@@ -13,6 +13,24 @@ import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { BookOpen, Calendar, Edit, Key, MoreVertical, Phone, Trash2, User } from "lucide-react";
 import type { StudentProfile, CourseAssignment } from "@/hooks/useStudents";
+import { effectiveAccess, enrollmentBalance, enrollmentStatusLabels, formatCOP } from "@/lib/operations";
+import type { EffectiveAccess } from "@/types";
+
+const enrollmentBadgeClass: Record<EffectiveAccess, string> = {
+  active: 'bg-green-100 text-green-700',
+  pending: 'bg-amber-100 text-amber-700',
+  suspended: 'bg-red-100 text-red-700',
+  cancelled: 'bg-gray-100 text-gray-600',
+  not_started: 'bg-blue-100 text-blue-700',
+  expired: 'bg-red-100 text-red-700',
+};
+
+const accessLabel = (assignment: CourseAssignment): string => {
+  const access = effectiveAccess(assignment);
+  if (access === 'not_started') return 'Aún no inicia';
+  if (access === 'expired') return 'Expirado';
+  return enrollmentStatusLabels[assignment.status];
+};
 
 interface Course {
   id: string;
@@ -106,13 +124,25 @@ export function StudentCard({ student, courses, onEdit, onChangePassword, onDele
                 <div className="flex flex-wrap gap-1">
                   {assignedCourses.slice(0, 3).map((assignment: CourseAssignment) => {
                     const courseExpired = assignment.expires_at && new Date(assignment.expires_at) < new Date();
+                    const accessStyle = enrollmentBadgeClass[effectiveAccess(assignment)];
+                    const balance = enrollmentBalance(assignment.agreed_price, [
+                      { amount: assignment.paid_total ?? 0 },
+                    ]);
                     return (
-                      <Badge 
-                        key={assignment.course_id} 
-                        variant="outline" 
+                      <Badge
+                        key={assignment.course_id}
+                        variant="outline"
                         className={`text-xs ${courseExpired ? 'border-red-300 text-red-600' : ''}`}
                       >
+                        <span className={`mr-1.5 rounded px-1 ${accessStyle}`}>
+                          {accessLabel(assignment)}
+                        </span>
                         {getCourseTitle(assignment.course_id)}
+                        {assignment.status === 'pending' && balance.balance > 0 && (
+                          <span className="ml-1 opacity-70">
+                            · saldo {formatCOP(balance.balance)}
+                          </span>
+                        )}
                         {assignment.expires_at && (
                           <span className="ml-1 opacity-70">
                             → {formatDate(assignment.expires_at)}

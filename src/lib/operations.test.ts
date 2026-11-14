@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
+  accessBlockedMessage,
   attendanceStats,
   attendanceStatusLabels,
+  diffEnrollments,
   effectiveAccess,
   enrollmentBalance,
   enrollmentStatusLabels,
@@ -136,5 +138,50 @@ describe('labels', () => {
       late: 'Tarde',
       excused: 'Excusa',
     });
+  });
+});
+
+describe('diffEnrollments', () => {
+  const existing = [
+    { id: 'e1', course_id: 'c1' },
+    { id: 'e2', course_id: 'c2' },
+  ];
+
+  it('inserts new, updates existing and deletes removed enrollments', () => {
+    const desired = [
+      { course_id: 'c2', agreed_price: 100 },
+      { course_id: 'c3', agreed_price: 200 },
+    ];
+    const diff = diffEnrollments(existing, desired);
+    expect(diff.toInsert).toEqual([{ course_id: 'c3', agreed_price: 200 }]);
+    expect(diff.toUpdate).toEqual([{ id: 'e2', course_id: 'c2', agreed_price: 100 }]);
+    expect(diff.toDelete).toEqual([{ id: 'e1', course_id: 'c1' }]);
+  });
+
+  it('is a no-op for an empty diff', () => {
+    expect(diffEnrollments([], [])).toEqual({ toInsert: [], toUpdate: [], toDelete: [] });
+  });
+
+  it('deletes everything when nothing is desired', () => {
+    expect(diffEnrollments(existing, []).toDelete).toHaveLength(2);
+  });
+});
+
+describe('accessBlockedMessage', () => {
+  it('explains a pending enrollment with the outstanding balance', () => {
+    const m = accessBlockedMessage('pending', { balance: 150000 });
+    expect(m.title).toBe('Pendiente de pago');
+    expect(m.detail).toContain('150.000');
+  });
+
+  it('explains not started, expired, suspended and cancelled', () => {
+    expect(accessBlockedMessage('not_started', { enabled_from: '2026-07-01T12:00:00Z' }).title).toContain('Inicia el');
+    expect(accessBlockedMessage('expired', { expires_at: '2026-01-01T12:00:00Z' }).title).toBe('Acceso expirado');
+    expect(accessBlockedMessage('suspended', {}).title).toBe('Acceso suspendido');
+    expect(accessBlockedMessage('cancelled', {}).title).toBe('Inscripción cancelada');
+  });
+
+  it('has a generic message for active access', () => {
+    expect(accessBlockedMessage('active', {}).title).toBe('Acceso habilitado');
   });
 });

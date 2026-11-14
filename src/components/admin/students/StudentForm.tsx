@@ -9,14 +9,28 @@ import { Switch } from "@/components/ui/switch";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Badge } from "@/components/ui/badge";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Calendar, Eye, EyeOff, Loader2, Upload, User } from "lucide-react";
 import { format } from "date-fns";
-import type { StudentProfile, CourseAssignment } from "@/hooks/useStudents";
+import type { StudentProfile, EnrollmentInput } from "@/hooks/useStudents";
 import { useImageUpload } from "@/hooks/useImageUpload";
+import { enrollmentStatusLabels, formatCOP } from "@/lib/operations";
+import type { EnrollmentStatus } from "@/types";
 
 interface Course {
   id: string;
   title: string;
+  price?: number;
 }
 
 interface CourseAssignmentInput {
@@ -25,6 +39,15 @@ interface CourseAssignmentInput {
   expires_at: string;
   notes: string;
   assigned: boolean;
+  /** Agreed total price as typed (string so the input can be edited freely). */
+  agreed_price: string;
+  /** Present when the student is already enrolled (editing). */
+  existing?: {
+    status: EnrollmentStatus;
+    payment_count: number;
+    enabled_from: string | null;
+    expires_at: string | null;
+  };
 }
 
 interface StudentFormProps {
@@ -47,12 +70,7 @@ export interface StudentFormData {
   enabled_from: string;
   expires_at: string;
   notes: string;
-  courses: Array<{
-    course_id: string;
-    enabled_from?: string;
-    expires_at?: string;
-    notes?: string;
-  }>;
+  courses: EnrollmentInput[];
 }
 
 export function StudentForm({ 
@@ -98,6 +116,15 @@ export function StudentForm({
           expires_at: existing?.expires_at ? format(new Date(existing.expires_at), 'yyyy-MM-dd') : '',
           notes: existing?.notes || '',
           assigned: !!existing,
+          agreed_price: String(existing ? existing.agreed_price : course.price ?? 0),
+          existing: existing
+            ? {
+                status: existing.status,
+                payment_count: existing.payment_count ?? 0,
+                enabled_from: existing.enabled_from,
+                expires_at: existing.expires_at,
+              }
+            : undefined,
         };
       });
       setCourseAssignments(assignments);
@@ -118,6 +145,7 @@ export function StudentForm({
         expires_at: '',
         notes: '',
         assigned: false,
+        agreed_price: String(course.price ?? 0),
       })));
     }
   }, [student, mode, courses, open]);
@@ -132,8 +160,20 @@ export function StudentForm({
     }
   };
 
+  const [pendingRemoval, setPendingRemoval] = useState<string | null>(null);
+
   const toggleCourseAssignment = (courseId: string) => {
-    setCourseAssignments(prev => 
+    const target = courseAssignments.find(c => c.course_id === courseId);
+    // Removing an enrollment that already has payments needs explicit confirmation.
+    if (target?.assigned && target.existing && target.existing.payment_count > 0) {
+      setPendingRemoval(courseId);
+      return;
+    }
+    applyToggle(courseId);
+  };
+
+  const applyToggle = (courseId: string) => {
+    setCourseAssignments(prev =>
       prev.map(c => 
         c.course_id === courseId ? { ...c, assigned: !c.assigned } : c
       )
@@ -153,12 +193,24 @@ export function StudentForm({
     
     const assignedCourses = courseAssignments
       .filter(c => c.assigned)
-      .map(c => ({
-        course_id: c.course_id,
-        enabled_from: c.enabled_from ? new Date(c.enabled_from).toISOString() : undefined,
-        expires_at: c.expires_at ? new Date(c.expires_at).toISOString() : undefined,
-        notes: c.notes || undefined,
-      }));
+      .map((c): EnrollmentInput => {
+        // Keep the stored timestamp when the date shown was not changed, so saving
+        // does not shift existing dates through the date-only input.
+        const sameDay = (stored: string | null | undefined, typed: string) =>
+          !!stored && !!typed && format(new Date(stored), 'yyyy-MM-dd') === typed;
+        const price = Number(c.agreed_price);
+        return {
+          course_id: c.course_id,
+          enabled_from: sameDay(c.existing?.enabled_from, c.enabled_from)
+            ? c.existing!.enabled_from!
+            : c.enabled_from ? new Date(c.enabled_from).toISOString() : undefined,
+          expires_at: sameDay(c.existing?.expires_at, c.expires_at)
+            ? c.existing!.expires_at!
+            : c.expires_at ? new Date(c.expires_at).toISOString() : undefined,
+          notes: c.notes || undefined,
+          agreed_price: c.agreed_price !== '' && Number.isFinite(price) && price >= 0 ? price : undefined,
+        };
+      });
 
     const data: StudentFormData = {
       name,
@@ -379,9 +431,18 @@ export function StudentForm({
                         }`}
                       >
                         <div className="flex items-center justify-between mb-2">
-                          <Label htmlFor={`course-${course.id}`} className="font-medium cursor-pointer">
-                            {course.title}
-                          </Label>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <Label htmlFor={`course-${course.id}`} className="font-medium cursor-pointer">
+                              {course.title}
+                            </Label>
+                            {assignment.assigned && (
+                              <Badge variant="outline" className="text-xs">
+                                {assignment.existing
+                                  ? enrollmentStatusLabels[assignment.existing.status]
+                                  : 'Nueva inscripción: pendiente de pago'}
+                              </Badge>
+                            )}
+                          </div>
                           <Switch
                             id={`course-${course.id}`}
                             checked={assignment.assigned}
@@ -391,6 +452,24 @@ export function StudentForm({
                         
                         {assignment.assigned && (
                           <div className="grid grid-cols-2 gap-3 mt-3">
+                            <div className="space-y-1 col-span-2">
+                              <Label className="text-xs text-muted-foreground">
+                                Valor acordado (COP)
+                                {course.price !== undefined && ` · precio del curso: ${formatCOP(course.price)}`}
+                              </Label>
+                              <Input
+                                type="number"
+                                min={0}
+                                step={1000}
+                                inputMode="numeric"
+                                value={assignment.agreed_price}
+                                onChange={(e) => updateCourseAssignment(course.id, 'agreed_price', e.target.value)}
+                                className="h-8"
+                              />
+                              <p className="text-xs text-muted-foreground">
+                                El acceso se activa automáticamente cuando los pagos cubren este valor.
+                              </p>
+                            </div>
                             <div className="space-y-1">
                               <Label className="text-xs text-muted-foreground">Acceso desde</Label>
                               <Input
@@ -444,6 +523,30 @@ export function StudentForm({
           </Button>
         </DialogFooter>
       </DialogContent>
+
+      <AlertDialog open={pendingRemoval !== null} onOpenChange={(o) => !o && setPendingRemoval(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Quitar inscripción con pagos?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta inscripción tiene pagos registrados. Si la quitas, los pagos se conservan en el
+              historial contable pero quedan desvinculados de la inscripción. Esta acción se aplica
+              al guardar los cambios.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (pendingRemoval) applyToggle(pendingRemoval);
+                setPendingRemoval(null);
+              }}
+            >
+              Quitar inscripción
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Dialog>
   );
 }

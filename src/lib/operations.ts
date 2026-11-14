@@ -83,3 +83,74 @@ const copFormatter = new Intl.NumberFormat('es-CO', {
 
 export const formatCOP = (amount: number | string | null | undefined): string =>
   copFormatter.format(toNumber(amount));
+
+export interface EnrollmentDiff<E extends { id: string; course_id: string }, D extends { course_id: string }> {
+  toInsert: D[];
+  toUpdate: Array<D & { id: string }>;
+  toDelete: E[];
+}
+
+/**
+ * Computes the minimal set of changes between the current enrollments of a
+ * student and the desired list, keyed by course. Used instead of
+ * delete-and-reinsert so status and payment links survive an edit.
+ */
+export const diffEnrollments = <E extends { id: string; course_id: string }, D extends { course_id: string }>(
+  existing: E[],
+  desired: D[],
+): EnrollmentDiff<E, D> => {
+  const existingByCourse = new Map(existing.map((e) => [e.course_id, e]));
+  const desiredCourseIds = new Set(desired.map((d) => d.course_id));
+  const toInsert: D[] = [];
+  const toUpdate: Array<D & { id: string }> = [];
+  for (const d of desired) {
+    const current = existingByCourse.get(d.course_id);
+    if (current) toUpdate.push({ ...d, id: current.id });
+    else toInsert.push(d);
+  }
+  return { toInsert, toUpdate, toDelete: existing.filter((e) => !desiredCourseIds.has(e.course_id)) };
+};
+
+const formatDay = (iso: string | null | undefined): string =>
+  iso
+    ? new Date(iso).toLocaleDateString('es-CO', { day: '2-digit', month: '2-digit', year: 'numeric' })
+    : '';
+
+export interface AccessBlockedContext {
+  balance?: number;
+  enabled_from?: string | null;
+  expires_at?: string | null;
+}
+
+/** Student-facing explanation (Spanish) of why an enrollment does not give access. */
+export const accessBlockedMessage = (
+  access: EffectiveAccess,
+  ctx: AccessBlockedContext,
+): { title: string; detail: string } => {
+  switch (access) {
+    case 'pending':
+      return {
+        title: 'Pendiente de pago',
+        detail:
+          ctx.balance !== undefined && ctx.balance > 0
+            ? `Tu saldo pendiente es ${formatCOP(ctx.balance)}. El acceso se habilita cuando se complete el pago.`
+            : 'El acceso se habilita cuando se complete el pago.',
+      };
+    case 'not_started':
+      return {
+        title: `Inicia el ${formatDay(ctx.enabled_from)}`,
+        detail: 'Tu acceso a este curso aún no está habilitado.',
+      };
+    case 'expired':
+      return {
+        title: 'Acceso expirado',
+        detail: ctx.expires_at ? `Tu acceso venció el ${formatDay(ctx.expires_at)}.` : 'Tu acceso a este curso venció.',
+      };
+    case 'suspended':
+      return { title: 'Acceso suspendido', detail: 'Tu acceso a este curso está suspendido temporalmente.' };
+    case 'cancelled':
+      return { title: 'Inscripción cancelada', detail: 'Esta inscripción fue cancelada.' };
+    default:
+      return { title: 'Acceso habilitado', detail: '' };
+  }
+};

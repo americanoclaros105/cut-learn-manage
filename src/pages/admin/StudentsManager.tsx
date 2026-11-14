@@ -135,7 +135,7 @@ export const StudentsManager = () => {
           enabled_from: data.enabled_from,
           expires_at: data.expires_at,
           notes: data.notes || null,
-          assigned_courses: data.courses as CourseAssignment[],
+          assigned_courses: data.courses,
         });
         toast.success('Estudiante actualizado correctamente');
       }

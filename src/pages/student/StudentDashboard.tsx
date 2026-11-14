@@ -1,7 +1,9 @@
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCourses } from '@/hooks/useCourses';
-import { useUserAssignedCourses, useUserProgress } from '@/hooks/useProgress';
+import { useMyEnrollments, useUserProgress } from '@/hooks/useProgress';
+import { accessBlockedMessage, formatCOP } from '@/lib/operations';
+import { ContactWhatsAppButton } from '@/components/student/ContactWhatsAppButton';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
@@ -19,7 +21,7 @@ export const StudentDashboard = () => {
   const navigate = useNavigate();
   
   const { data: allCourses = [], isLoading: loadingCourses } = useCourses({ status: 'published' });
-  const { data: assignedCourseIds = [], isLoading: loadingAssigned } = useUserAssignedCourses();
+  const { data: enrollments = [], isLoading: loadingAssigned } = useMyEnrollments();
   const { data: progressData = [], isLoading: loadingProgress } = useUserProgress();
 
   const getCourseProgress = (courseId: string) => {
@@ -27,10 +29,15 @@ export const StudentDashboard = () => {
     return courseProgress.length;
   };
 
-  const isAssigned = (courseId: string) => assignedCourseIds.includes(courseId);
-  
-  const assignedCourses = allCourses.filter(c => isAssigned(c.id));
-  const otherCourses = allCourses.filter(c => !isAssigned(c.id));
+  const enrollmentFor = (courseId: string) => enrollments.find(e => e.course_id === courseId);
+
+  // Only enrollments with active access open the course; the rest show a state card.
+  const assignedCourses = allCourses.filter(c => enrollmentFor(c.id)?.access === 'active');
+  const blockedCourses = allCourses.filter(c => {
+    const e = enrollmentFor(c.id);
+    return !!e && e.access !== 'active';
+  });
+  const otherCourses = allCourses.filter(c => !enrollmentFor(c.id));
 
   if (loadingCourses || loadingAssigned || loadingProgress) {
     return (
@@ -119,6 +126,58 @@ export const StudentDashboard = () => {
           </div>
         )}
       </section>
+
+      {/* Enrolled but without access yet (pending payment, suspended, not started, expired) */}
+      {blockedCourses.length > 0 && (
+        <section className="mb-12">
+          <h2 className="text-xl font-semibold mb-4">Inscripciones sin acceso</h2>
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {blockedCourses.map((course) => {
+              const enrollment = enrollmentFor(course.id)!;
+              const message = accessBlockedMessage(enrollment.access, enrollment);
+              return (
+                <Card key={course.id} className="overflow-hidden border-0 shadow-md">
+                  <div className="relative aspect-video overflow-hidden">
+                    <img
+                      src={course.cover_image || 'https://images.unsplash.com/photo-1585747860715-2ba37e788b70?w=800'}
+                      alt={course.title}
+                      className="w-full h-full object-cover grayscale"
+                    />
+                    <div className="absolute inset-0 bg-accent/60 flex items-center justify-center">
+                      <Lock className="w-10 h-10 text-accent-foreground" />
+                    </div>
+                  </div>
+                  <CardContent className="p-5 space-y-3">
+                    <Badge variant="outline">{message.title}</Badge>
+                    <h3 className="font-semibold text-lg line-clamp-2">{course.title}</h3>
+                    <p className="text-sm text-muted-foreground">{message.detail}</p>
+                    {enrollment.access === 'pending' && enrollment.agreed_price > 0 && (
+                      <div className="text-sm space-y-1">
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Valor acordado</span>
+                          <span className="font-medium">{formatCOP(enrollment.agreed_price)}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Pagado</span>
+                          <span className="font-medium">{formatCOP(enrollment.paid)}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Saldo</span>
+                          <span className="font-semibold">{formatCOP(Math.max(enrollment.balance, 0))}</span>
+                        </div>
+                      </div>
+                    )}
+                    <ContactWhatsAppButton
+                      className="w-full"
+                      message={`Hola! Escribo sobre mi inscripción al curso "${course.title}" (${message.title}).`}
+                    />
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+        </section>
+      )}
 
       {/* Other Courses */}
       {otherCourses.length > 0 && (

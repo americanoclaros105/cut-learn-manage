@@ -97,22 +97,16 @@ export const useCoursesWithStats = (options?: { status?: 'published' | 'draft' |
       const { data: courses, error } = await query;
       if (error) throw error;
 
-      // Get lesson counts for each course
-      const coursesWithStats = await Promise.all(
-        (courses || []).map(async (course) => {
-          const { count } = await supabase
-            .from('lessons')
-            .select('*, modules!inner(course_id)', { count: 'exact', head: true })
-            .eq('modules.course_id', course.id);
-          
-          return { 
-            ...course, 
-            lesson_count: count || 0 
-          } as unknown as CourseWithStats;
-        })
-      );
-      
-      return coursesWithStats;
+      // Lessons are no longer readable by anonymous visitors (RLS), so counts
+      // come from a content-free SECURITY DEFINER function.
+      const { data: counts, error: countsError } = await supabase.rpc('course_outline_counts');
+      if (countsError) console.error('course_outline_counts failed', countsError);
+      const lessonCounts = new Map((counts || []).map((c) => [c.course_id, c.lesson_count]));
+
+      return (courses || []).map((course) => ({
+        ...course,
+        lesson_count: lessonCounts.get(course.id) ?? 0,
+      })) as unknown as CourseWithStats[];
     },
   });
 };

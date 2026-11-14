@@ -141,3 +141,49 @@ export interface TestimonialItem {
   rating: number;
   avatar?: string;
 }
+
+// Academy operations (enrollments, payments, attendance)
+export type EnrollmentStatus = 'pending' | 'active' | 'suspended' | 'cancelled';
+export type EnrollmentActivationSource = 'payment' | 'manual' | 'legacy';
+export type PaymentMethod = 'cash' | 'transfer' | 'card' | 'nequi' | 'daviplata' | 'other';
+export type AttendanceStatus = 'present' | 'absent' | 'late' | 'excused';
+
+/** Access state of an enrollment as seen by a student at a given moment. */
+export type EffectiveAccess =
+  | 'active'
+  | 'pending'
+  | 'suspended'
+  | 'cancelled'
+  | 'not_started'
+  | 'expired';
+
+export interface EnrollmentLike {
+  status: EnrollmentStatus;
+  enabled_from: string | null;
+  expires_at: string | null;
+}
+
+export interface PaymentLike {
+  amount: number;
+  voided_at?: string | null;
+}
+
+export interface AttendanceRecordLike {
+  status: AttendanceStatus;
+}
+
+export interface EnrollmentBalance {
+  paid: number;
+  balance: number;
+  isFullyPaid: boolean;
+}
+
+export interface AttendanceStats {
+  present: number;
+  absent: number;
+  late: number;
+  excused: number;
+  total: number;
+  /** (present + late) / (total excluding excused); 0 when nothing counts. */
+  rate: number;
+}

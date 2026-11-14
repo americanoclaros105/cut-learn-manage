@@ -284,6 +284,55 @@ BEGIN
     WHEN insufficient_privilege THEN NULL;
   END;
 
+  -- -------------------------------------------------------------------------
+  -- 11. apply_student_enrollments as superadmin: the upsert keeps id, status
+  --     and price when omitted; new items get their agreed price; courses
+  --     missing from the list are unenrolled and payments keep snapshots.
+  -- -------------------------------------------------------------------------
+  INSERT INTO public.user_roles (user_id, role) VALUES (u2, 'superadmin');
+  PERFORM set_config('request.jwt.claims', json_build_object('sub', u2, 'role', 'authenticated')::text, true);
+
+  SELECT * INTO r FROM public.user_course_assignments WHERE id = e1;
+
+  PERFORM public.apply_student_enrollments(
+    u1,
+    jsonb_build_array(
+      jsonb_build_object('course_id', c1),
+      jsonb_build_object('course_id', c2, 'agreed_price', 70000)
+    )
+  );
+
+  IF NOT EXISTS (
+    SELECT 1 FROM public.user_course_assignments
+    WHERE id = e1 AND status = r.status AND agreed_price = r.agreed_price
+  ) THEN
+    RAISE EXCEPTION 'T11: upsert must keep the existing enrollment id, status and agreed price';
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM public.user_course_assignments
+    WHERE user_id = u1 AND course_id = c2 AND agreed_price = 70000 AND status = 'pending'
+  ) THEN
+    RAISE EXCEPTION 'T11: new enrollment must be pending with the given agreed price';
+  END IF;
+  IF EXISTS (SELECT 1 FROM public.user_course_assignments WHERE id = e_free) THEN
+    RAISE EXCEPTION 'T11: enrollment missing from the list must be removed';
+  END IF;
+
+  PERFORM public.apply_student_enrollments(u1, jsonb_build_array(jsonb_build_object('course_id', c2)));
+
+  IF EXISTS (SELECT 1 FROM public.user_course_assignments WHERE id = e1) THEN
+    RAISE EXCEPTION 'T11: course missing from the list must be unenrolled';
+  END IF;
+  IF EXISTS (
+    SELECT 1 FROM public.payments
+    WHERE id IN (p2, p3)
+      AND (enrollment_id IS NOT NULL OR user_id IS DISTINCT FROM u1 OR student_name IS DISTINCT FROM 'Test Uno')
+  ) THEN
+    RAISE EXCEPTION 'T11: payments of a removed enrollment must be kept with their snapshots';
+  END IF;
+
+  PERFORM set_config('request.jwt.claims', '', true);
+
   RAISE NOTICE 'academy_operations tests passed';
 END;
 $$;

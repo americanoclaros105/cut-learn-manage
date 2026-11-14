@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
-import { ArrowLeft, Save, Loader2, BookOpen, Image, Palette, Layers } from 'lucide-react';
+import { ArrowLeft, Save, Loader2, BookOpen, Image, Palette, Layers, ClipboardList } from 'lucide-react';
 import { FileUploader } from '@/components/admin/FileUploader';
 
 // HSL conversion helpers
@@ -170,18 +170,26 @@ export const CourseEditor = () => {
             </p>
           </div>
         </div>
-        <Button
-          onClick={handleSave}
-          disabled={createCourse.isPending || updateCourse.isPending}
-          className="gap-2"
-        >
-          {(createCourse.isPending || updateCourse.isPending) ? (
-            <Loader2 className="w-4 h-4 animate-spin" />
-          ) : (
-            <Save className="w-4 h-4" />
+        <div className="flex items-center gap-2">
+          {isEditing && (
+            <Button variant="outline" className="gap-2" onClick={() => navigate(`/admin/cursos/${courseId}/grupo`)}>
+              <ClipboardList className="w-4 h-4" />
+              Grupo y asistencia
+            </Button>
           )}
-          Guardar Curso
-        </Button>
+          <Button
+            onClick={handleSave}
+            disabled={createCourse.isPending || updateCourse.isPending}
+            className="gap-2"
+          >
+            {(createCourse.isPending || updateCourse.isPending) ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <Save className="w-4 h-4" />
+            )}
+            Guardar Curso
+          </Button>
+        </div>
       </div>
 
       {/* Tabs */}

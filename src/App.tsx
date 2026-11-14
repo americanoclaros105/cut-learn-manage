@@ -21,6 +21,7 @@ import { LandingEditor } from "./pages/admin/LandingEditor";
 import { CoursesManager } from "./pages/admin/CoursesManager";
 import { CourseEditor } from "./pages/admin/CourseEditor";
 import { StudentsManager } from "./pages/admin/StudentsManager";
+import { CourseGroup } from "./pages/admin/CourseGroup";
 
 // Student Pages
 import { StudentDashboard } from "./pages/student/StudentDashboard";
@@ -54,6 +55,7 @@ const App = () => (
               <Route path="cursos" element={<CoursesManager />} />
               <Route path="cursos/nuevo" element={<CourseEditor />} />
               <Route path="cursos/:courseId" element={<CourseEditor />} />
+              <Route path="cursos/:courseId/grupo" element={<CourseGroup />} />
               <Route path="estudiantes" element={<StudentsManager />} />
             </Route>
 

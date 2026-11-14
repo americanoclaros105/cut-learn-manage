@@ -42,7 +42,7 @@ published modules/lessons).
       class_sessions, attendance, triggers, RLS, has_course_access), regenerate-equivalent types update.
 - [x] T2 Access gating: student hooks/pages honor enrollment status + dates; StudentForm creates pending
       enrollments with agreed price; admin student list shows enrollment status.
-- [ ] T3 Roster + attendance UI: `/admin/cursos/:courseId/grupo` with tabs Inscritos / Asistencia.
+- [x] T3 Roster + attendance UI: `/admin/cursos/:courseId/grupo` with tabs Inscritos / Asistencia.
 - [ ] T4 Accounting UI: `/admin/contabilidad` with KPIs, ledger, filters, register/void payment, CSV export.
 - [ ] T5 Verification: build, lint, tests, browser walkthrough.
 
@@ -69,6 +69,15 @@ published modules/lessons).
   Until applied, landing lesson counts show 0 and the student/admin enrollment queries fail (new columns missing).
 - Delivery decisions: payments have no DELETE policy (void only); `modules`/`lessons` SELECT now requires
   `has_course_access` (storage buckets still public, out of scope).
+
+- T3: route delegated writer (2+ non-trivial files). Strict TDD for `src/lib/roster.ts` (rows, KPIs, filters, roll
+  call draft helpers; RED "Cannot find module ./roster" then 17 tests GREEN) and `src/lib/money.ts` (COP input).
+  Hooks `useEnrollments`, `usePayments`, `useClassSessions` (+ shared `operationsQueries` keys/invalidation);
+  presentational components in `src/components/admin/operations/`; containers in `src/pages/admin/CourseGroup.tsx`
+  and `src/pages/admin/course-group/`. Entry points: CoursesManager card button and CourseEditor header.
+  `RegisterPaymentDialog` is reusable for T4 (targets list + combobox, or locked to one enrollment).
+  Checks: `npm test` 50 passed; `npm run build` OK; eslint clean on new files (CoursesManager/CourseEditor keep
+  their pre-existing errors). Not exercised in a browser: needs the migration applied on a DB first.
 
 ## Review findings (native review of T1+T2, fixed in `fix(db): harden enrollment access automation after review`)
 Route: delegated writer (2+ non-trivial files). Migration edited in place (never applied anywhere yet).

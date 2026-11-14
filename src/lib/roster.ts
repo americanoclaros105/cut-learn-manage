@@ -16,6 +16,8 @@ export interface RosterEnrollment {
   enabled_from: string | null;
   expires_at: string | null;
   notes: string | null;
+  /** Cohort of the course; null/absent = "Sin grupo" (legacy enrollments). */
+  group_id?: string | null;
 }
 
 export interface RosterStudent {

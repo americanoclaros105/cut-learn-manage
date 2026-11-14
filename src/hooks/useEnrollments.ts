@@ -33,7 +33,7 @@ export const useCourseRoster = (courseId: string) =>
     queryFn: async (): Promise<CourseRosterData> => {
       const { data: enrollments, error } = await supabase
         .from('user_course_assignments')
-        .select('id, user_id, course_id, status, agreed_price, activated_by, enabled_from, expires_at, notes')
+        .select('id, user_id, course_id, status, agreed_price, activated_by, enabled_from, expires_at, notes, group_id')
         .eq('course_id', courseId);
       if (error) throw error;
 

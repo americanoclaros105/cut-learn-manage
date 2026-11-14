@@ -1,8 +1,7 @@
-import { format } from 'date-fns';
-import { es } from 'date-fns/locale';
 import { ClipboardCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type { AgendaSession } from '@/hooks/useAgenda';
+import { formatClock } from '@/lib/agenda';
 import { GroupDot } from '@/components/admin/groups/GroupDot';
 
 interface TodayStripProps {
@@ -30,7 +29,7 @@ export const TodayStrip = ({ sessions, loading, onOpen }: TodayStripProps) => (
                 <span className="truncate">{s.course_title}</span>
               </p>
               <p className="truncate text-xs text-muted-foreground">
-                {format(new Date(s.starts_at), 'h:mm a', { locale: es })} · {s.group?.name ?? 'Sin grupo'}
+                {formatClock(new Date(s.starts_at))} · {s.group?.name ?? 'Sin grupo'}
               </p>
             </div>
             <Button size="sm" variant={s.rollCallTaken ? 'outline' : 'default'} onClick={() => onOpen(s)}>

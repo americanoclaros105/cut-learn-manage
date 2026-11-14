@@ -5,6 +5,7 @@ import {
   agendaRange,
   blockPosition,
   filterAgenda,
+  formatClock,
   hourMarks,
   layoutDay,
   nowLinePosition,
@@ -225,5 +226,14 @@ describe('sessionsOfDay', () => {
   it('keeps the classes that start on that local day, in time order', () => {
     const out = sessionsOfDay([at('late', 18), at('other', 9, 10), at('early', 8)], local(2026, 11, 9, 15));
     expect(out.map((s) => s.id)).toEqual(['early', 'late']);
+  });
+});
+
+describe('formatClock', () => {
+  it('writes 12-hour time with a. m. / p. m.', () => {
+    expect(formatClock(local(2026, 11, 9, 0, 5))).toBe('12:05 a. m.');
+    expect(formatClock(local(2026, 11, 9, 9, 30))).toBe('9:30 a. m.');
+    expect(formatClock(local(2026, 11, 9, 12, 0))).toBe('12:00 p. m.');
+    expect(formatClock(local(2026, 11, 9, 18, 0))).toBe('6:00 p. m.');
   });
 });

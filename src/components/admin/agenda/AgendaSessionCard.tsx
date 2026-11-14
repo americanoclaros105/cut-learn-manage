@@ -1,14 +1,13 @@
 import type { CSSProperties } from 'react';
-import { format } from 'date-fns';
-import { es } from 'date-fns/locale';
 import { CheckCircle2, Clock, MapPin, UserRound, Users } from 'lucide-react';
 import type { AgendaSession } from '@/hooks/useAgenda';
+import { formatClock } from '@/lib/agenda';
 import { cn } from '@/lib/utils';
 import { sessionColorStyle } from './sessionColorStyle';
 
 const timeRange = (session: AgendaSession): string => {
-  const start = format(new Date(session.starts_at), 'h:mm a', { locale: es });
-  return session.ends_at ? `${start} – ${format(new Date(session.ends_at), 'h:mm a', { locale: es })}` : start;
+  const start = formatClock(new Date(session.starts_at));
+  return session.ends_at ? `${start} – ${formatClock(new Date(session.ends_at))}` : start;
 };
 
 interface AgendaSessionCardProps {

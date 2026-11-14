@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { GroupDot } from '@/components/admin/groups/GroupDot';
 import type { AgendaSession, UpcomingGroup } from '@/hooks/useAgenda';
-import { sessionHref } from '@/lib/agenda';
+import { formatClock, sessionHref } from '@/lib/agenda';
 import { occupancyInfo } from '@/lib/groupViews';
 
 interface TodayClassesCardProps {
@@ -42,7 +42,7 @@ export const TodayClassesCard = ({ sessions, loading }: TodayClassesCardProps) =
               <span className="min-w-0">
                 <span className="block truncate font-medium">{s.course_title}</span>
                 <span className="block truncate text-xs text-muted-foreground">
-                  {format(new Date(s.starts_at), 'h:mm a', { locale: es })} · {s.group?.name ?? 'Sin grupo'}
+                  {formatClock(new Date(s.starts_at))} · {s.group?.name ?? 'Sin grupo'}
                 </span>
               </span>
             </span>

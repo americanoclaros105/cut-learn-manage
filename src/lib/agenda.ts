@@ -110,6 +110,12 @@ export const blockPosition = (startsAt: string, endsAt: string | null): BlockPos
 
 const hourLabel = (hour: number): string => `${hour % 12 === 0 ? 12 : hour % 12} ${hour >= 12 ? 'p. m.' : 'a. m.'}`;
 
+/** "6:00 p. m." (local time), the same style as the group schedules. */
+export const formatClock = (date: Date): string => {
+  const hours = date.getHours();
+  return `${hours % 12 === 0 ? 12 : hours % 12}:${String(date.getMinutes()).padStart(2, '0')} ${hours >= 12 ? 'p. m.' : 'a. m.'}`;
+};
+
 export const hourMarks = (): Array<{ hour: number; label: string }> =>
   Array.from({ length: AGENDA_END_HOUR - AGENDA_START_HOUR }, (_, i) => {
     const hour = AGENDA_START_HOUR + i;

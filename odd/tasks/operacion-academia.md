@@ -49,6 +49,19 @@ published modules/lessons).
       `/admin/estudiantes/nuevo` and `/admin/estudiantes/:studentId` — profile, account access, enrollments
       with payments/balance/status actions, payment history, attendance, course progress, password, delete.
       Migration applied to production by the user (dry run passed 11/11).
+- [x] T7a Course groups (cohorts) — DB + domain: new migration `course_groups` (name, dates, location,
+      instructor, capacity, optional price, notes, color, archived), `course_group_schedules` (weekday,
+      start/end time, multiple per group), `user_course_assignments.group_id`, `class_sessions.group_id` +
+      status (scheduled/cancelled), RPCs to generate sessions from the schedule, transfer a student between
+      groups, capacity guard; RLS; SQL tests; pure schedule/status logic with Vitest.
+- [ ] T7b Groups admin UI: course → groups list, group detail (students, calendar + attendance, finances),
+      roster/attendance scoped by group, "Generar calendario", transfer student.
+- [ ] T7c Groups everywhere else: group picker in student page/enrollment dialogs and create page,
+      weekly agenda `/admin/agenda` across all groups, student side shows group, schedule and next classes.
+
+Group decisions (user gave freedom, 2026-11-13): a student is in at most one group per course
+(UNIQUE(user_id, course_id) kept; moving = transfer, payments untouched); content access stays per course;
+group dates prefill enrollment access dates; existing enrollments/sessions stay with group_id NULL ("Sin grupo").
 
 ## Acceptance criteria
 - Enrolling a student creates a `pending` enrollment; student cannot open the course nor read its lessons (RLS).
@@ -107,6 +120,24 @@ published modules/lessons).
   Checks: `npm test` 95 passed; `npm run build` OK; `npx tsc --noEmit -p tsconfig.app.json` clean; eslint clean on all
   new/touched files.
 
+- T7a: route delegated writer (2+ non-trivial files). Commits `4d0b3b0` (migration `20261114090000_course_groups.sql` +
+  `supabase/tests/course_groups.test.sql`) and `d70376e` (domain, types, hooks). Strict TDD for `src/lib/groups.ts`
+  (expandSchedule, groupPhase, formatSchedule, seatsLeft/isGroupFull, labels, defaultAccessDates, groupErrorMessage;
+  RED "Failed to load url ./groups" then 119 tests GREEN). DB objects: `course_groups`, `course_group_schedules`
+  (overlap trigger), `user_course_assignments.group_id`, `class_sessions.group_id/status/cancel_reason/generated`
+  (+ unique partial index on (group_id, starts_at)), view `group_occupancy` (security_invoker, superadmin only),
+  RPCs `generate_group_sessions`, `transfer_enrollment_group`, `replace_group_schedules` (atomic schedule swap),
+  helper `user_in_group`, `apply_student_enrollments` with optional `group_id` (key absent keeps the group, null clears it).
+  Trigger ordering: BEFORE triggers fire alphabetically, so `enrollment_apply_group_trg` (group price + course match +
+  capacity) runs before `enrollment_set_defaults_trg` (course price fallback) and `enrollment_track_status_trg`.
+  Capacity counts non-cancelled enrollments, locks the group row FOR UPDATE, and excludes the same (user, course) pair so
+  INSERT ... ON CONFLICT in apply_student_enrollments is not double counted. Session times use
+  `(date + time) AT TIME ZONE 'America/Bogota'`. Hooks: `useCourseGroups` (list/one/save/archive/delete/generate/transfer),
+  `useCourseSessions(courseId, groupId?)` filter (undefined = all, null = Sin grupo), `useSetSessionCancelled`,
+  `useEnrollStudent` accepts `groupId`. Dry-run bundles (gitignored) in `supabase/manual/3_grupos_prueba_en_seco.sql` and
+  `4_grupos_aplicar.sql`. The SQL was written by careful reading and NOT executed: run the dry run before applying.
+  Checks: `npm test` 119 passed; `npm run build` OK; `npx tsc --noEmit -p tsconfig.app.json` clean; eslint clean on touched files.
+
 ## Review findings (native review of T1+T2, fixed in `fix(db): harden enrollment access automation after review`)
 Route: delegated writer (2+ non-trivial files). Migration edited in place (never applied anywhere yet).
 1. Payment activation relabelled manual: `recompute_enrollment_access` sets the transaction-local flag
@@ -129,4 +160,4 @@ Route: delegated writer (2+ non-trivial files). Migration edited in place (never
    careful reading; NOT executed (no DB access from the writer).
 
 ## Next step
-T5: apply the migration, run `supabase/tests/academy_operations.test.sql`, browser walkthrough.
+T7b: groups admin UI (after the user runs the groups dry run). T5: browser walkthrough once migrations are applied.

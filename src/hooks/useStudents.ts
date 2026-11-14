@@ -1,5 +1,33 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import type { EnrollmentStatus } from '@/types';
+
+type RawAssignment = Omit<CourseAssignment, 'paid_total' | 'payment_count'>;
+
+/** Attaches payment totals to enrollments (admin only; students cannot read others' payments). */
+const withPaymentTotals = async (assignments: RawAssignment[]): Promise<CourseAssignment[]> => {
+  if (assignments.length === 0) return [];
+  const ids = assignments.map((a) => a.id);
+  const payments: Array<{ enrollment_id: string | null; amount: number; voided_at: string | null }> = [];
+  // Chunked to keep the request URL short.
+  for (let i = 0; i < ids.length; i += 100) {
+    const { data, error } = await supabase
+      .from('payments')
+      .select('enrollment_id, amount, voided_at')
+      .in('enrollment_id', ids.slice(i, i + 100));
+    if (error) throw error;
+    payments.push(...(data || []));
+  }
+
+  return assignments.map((a) => {
+    const own = payments.filter((p) => p.enrollment_id === a.id);
+    return {
+      ...a,
+      payment_count: own.length,
+      paid_total: own.filter((p) => !p.voided_at).reduce((sum, p) => sum + Number(p.amount), 0),
+    };
+  });
+};
 
 export interface CourseAssignment {
   id: string;
@@ -9,6 +37,23 @@ export interface CourseAssignment {
   enabled_from: string | null;
   expires_at: string | null;
   notes: string | null;
+  status: EnrollmentStatus;
+  agreed_price: number;
+  activated_by: string | null;
+  group_id?: string | null;
+  /** Sum of non-voided payments (admin views only). */
+  paid_total?: number;
+  /** Number of payments (voided included) linked to this enrollment. */
+  payment_count?: number;
+}
+
+/** Desired enrollment sent by the admin form; new ones are always created pending. */
+export interface EnrollmentInput {
+  course_id: string;
+  enabled_from?: string;
+  expires_at?: string;
+  notes?: string;
+  agreed_price?: number;
 }
 
 export interface StudentProfile {
@@ -59,10 +104,12 @@ export const useStudents = () => {
       
       if (assignmentsError) throw assignmentsError;
 
+      const enrollments = await withPaymentTotals((assignments || []) as RawAssignment[]);
+
       // Combine data
       return profiles?.map(profile => ({
         ...profile,
-        assigned_courses: assignments?.filter(a => a.user_id === profile.id) || [],
+        assigned_courses: enrollments.filter(a => a.user_id === profile.id),
       })) as StudentProfile[];
     },
   });
@@ -76,9 +123,11 @@ export const useStudent = (studentId: string) => {
         .from('profiles')
         .select('*')
         .eq('id', studentId)
-        .single();
+        .maybeSingle();
       
       if (profileError) throw profileError;
+      // Unknown id: the student page renders its not-found state.
+      if (!profile) return null;
 
       const { data: assignments, error: assignmentsError } = await supabase
         .from('user_course_assignments')
@@ -89,7 +138,7 @@ export const useStudent = (studentId: string) => {
 
       return {
         ...profile,
-        assigned_courses: assignments || [],
+        assigned_courses: await withPaymentTotals((assignments || []) as RawAssignment[]),
       } as StudentProfile;
     },
     enabled: !!studentId,
@@ -110,12 +159,7 @@ export const useCreateStudent = () => {
       enabled_from?: string;
       expires_at?: string;
       notes?: string;
-      courses?: Array<{
-        course_id: string;
-        enabled_from?: string;
-        expires_at?: string;
-        notes?: string;
-      }>;
+      courses?: EnrollmentInput[];
     }) => {
       const { data: response, error } = await supabase.functions.invoke('create-student', {
         body: data,
@@ -136,7 +180,11 @@ export const useUpdateStudent = () => {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: async ({ id, assigned_courses, ...updates }: Partial<StudentProfile> & { id: string }) => {
+    mutationFn: async ({
+      id,
+      assigned_courses,
+      ...updates
+    }: Omit<Partial<StudentProfile>, 'assigned_courses'> & { id: string; assigned_courses?: EnrollmentInput[] }) => {
       // Update profile
       const { error: profileError } = await supabase
         .from('profiles')
@@ -155,28 +203,20 @@ export const useUpdateStudent = () => {
 
       // Update course assignments if provided
       if (assigned_courses !== undefined) {
-        // Remove all current assignments
-        await supabase
-          .from('user_course_assignments')
-          .delete()
-          .eq('user_id', id);
-        
-        // Add new assignments with all fields
-        if (assigned_courses.length > 0) {
-          const { error: assignError } = await supabase
-            .from('user_course_assignments')
-            .insert(
-              assigned_courses.map(course => ({
-                user_id: id,
-                course_id: course.course_id,
-                enabled_from: course.enabled_from || new Date().toISOString(),
-                expires_at: course.expires_at || null,
-                notes: course.notes || null,
-              }))
-            );
-          
-          if (assignError) throw assignError;
-        }
+        // Applied atomically server-side (single transaction): inserts, updates and
+        // removals succeed or fail together, and status / payment links of the
+        // enrollments that stay are preserved.
+        const { error: enrollmentsError } = await supabase.rpc('apply_student_enrollments', {
+          _user_id: id,
+          _items: assigned_courses.map((course) => ({
+            course_id: course.course_id,
+            enabled_from: course.enabled_from || null,
+            expires_at: course.expires_at || null,
+            notes: course.notes || null,
+            agreed_price: course.agreed_price ?? null,
+          })),
+        });
+        if (enrollmentsError) throw enrollmentsError;
       }
 
       return id;

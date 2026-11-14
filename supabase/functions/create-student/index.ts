@@ -11,6 +11,7 @@ interface CourseAssignment {
   enabled_from?: string;
   expires_at?: string;
   notes?: string;
+  agreed_price?: number;
 }
 
 interface CreateStudentRequest {
@@ -122,6 +123,9 @@ serve(async (req) => {
         enabled_from: c.enabled_from || new Date().toISOString(),
         expires_at: c.expires_at || null,
         notes: c.notes || null,
+        // Enrollments start as pending (column default); an omitted price falls
+        // back to the course price through a database trigger.
+        agreed_price: c.agreed_price ?? null,
       }));
 
       const { error: assignError } = await supabaseAdmin
@@ -130,6 +134,13 @@ serve(async (req) => {
 
       if (assignError) {
         console.error('Assignment error:', assignError);
+        // Roll back the new user so the admin can retry with the same email,
+        // and surface the failure instead of reporting a half-created student.
+        const { error: rollbackError } = await supabaseAdmin.auth.admin.deleteUser(userId);
+        if (rollbackError) {
+          console.error('Rollback error:', rollbackError);
+        }
+        throw new Error(`No se pudieron asignar los cursos: ${assignError.message}`);
       }
     }
 

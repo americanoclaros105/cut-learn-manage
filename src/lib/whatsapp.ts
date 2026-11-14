@@ -18,3 +18,12 @@ export const openWhatsApp = (
     '_blank'
   );
 };
+
+/** Opens WhatsApp with a free-form message (used for support / payment follow-ups). */
+export const openWhatsAppMessage = (phone: string, message: string) => {
+  const cleanPhone = phone.replace(/\D/g, '');
+  window.open(
+    `https://api.whatsapp.com/send?phone=+${cleanPhone}&text=${encodeURIComponent(message)}`,
+    '_blank'
+  );
+};

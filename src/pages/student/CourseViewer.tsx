@@ -2,7 +2,12 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCourseWithModules, Lesson } from '@/hooks/useCourses';
-import { useCourseProgress, useMarkLessonComplete, useUserAssignedCourses } from '@/hooks/useProgress';
+import { useMyGroups } from '@/hooks/useMyGroups';
+import { useCourseProgress, useMarkLessonComplete, useMyEnrollments } from '@/hooks/useProgress';
+import { nextSession } from '@/lib/groupViews';
+import { classWhen } from '@/lib/studentGroups';
+import { accessBlockedMessage, formatCOP } from '@/lib/operations';
+import { ContactWhatsAppButton } from '@/components/student/ContactWhatsAppButton';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { Lock, Loader2, ArrowLeft } from 'lucide-react';
@@ -18,7 +23,7 @@ export const CourseViewer = () => {
   const navigate = useNavigate();
 
   const { data: course, isLoading: loadingCourse } = useCourseWithModules(courseId || '');
-  const { data: assignedCourses = [], isLoading: loadingAssigned } = useUserAssignedCourses();
+  const { data: enrollments = [], isLoading: loadingAssigned } = useMyEnrollments();
   const { data: progressData = [], isLoading: loadingProgress } = useCourseProgress(courseId || '');
   const markComplete = useMarkLessonComplete();
 
@@ -29,7 +34,13 @@ export const CourseViewer = () => {
   const [showCertificate, setShowCertificate] = useState(false);
   const hasCelebratedRef = useRef(false);
 
-  const hasAccess = courseId ? assignedCourses.includes(courseId) : false;
+  const enrollment = courseId ? enrollments.find((e) => e.course_id === courseId) : undefined;
+  // Access requires an active enrollment within its dates (also enforced by RLS).
+  const hasAccess = enrollment?.access === 'active';
+  const blocked = enrollment ? accessBlockedMessage(enrollment.access, enrollment) : null;
+  const { data: myGroups = [] } = useMyGroups(enrollment?.group_id ? [enrollment.group_id] : []);
+  const myGroup = myGroups.find((g) => g.id === enrollment?.group_id);
+  const upcoming = myGroup ? nextSession(myGroup.sessions, new Date()) : null;
   const completedLessons = progressData.map((p) => p.lesson_id);
 
   // Apply course theme
@@ -187,14 +198,27 @@ export const CourseViewer = () => {
         <div className="w-20 h-20 rounded-full bg-destructive/10 flex items-center justify-center mb-6">
           <Lock className="w-10 h-10 text-destructive" />
         </div>
-        <h2 className="text-2xl font-bold mb-2 text-center">Acceso Restringido</h2>
-        <p className="text-muted-foreground text-center mb-6 max-w-md">
-          No tienes acceso a este curso. Contacta al administrador para solicitar acceso.
+        <h2 className="text-2xl font-bold mb-2 text-center">{blocked ? blocked.title : 'Acceso Restringido'}</h2>
+        <p className="text-muted-foreground text-center mb-2 max-w-md">
+          {blocked
+            ? blocked.detail
+            : 'No tienes acceso a este curso. Contacta al administrador para solicitar acceso.'}
         </p>
+        {enrollment?.access === 'pending' && enrollment.agreed_price > 0 && (
+          <p className="text-sm text-muted-foreground text-center mb-6">
+            Pagado {formatCOP(enrollment.paid)} de {formatCOP(enrollment.agreed_price)}
+          </p>
+        )}
+        <div className="flex flex-col sm:flex-row gap-3 mt-4">
+          <ContactWhatsAppButton
+            size="lg"
+            message={`Hola! Escribo sobre mi acceso al curso "${course?.title ?? ''}"${blocked ? ` (${blocked.title})` : ''}.`}
+          />
         <Button onClick={() => navigate('/estudiante')} size="lg">
           <ArrowLeft className="w-4 h-4 mr-2" />
           Volver a Mis Cursos
         </Button>
+        </div>
       </div>
     );
   }
@@ -223,6 +247,8 @@ export const CourseViewer = () => {
         onToggleSidebar={() => setIsMobileSidebarOpen(!isMobileSidebarOpen)}
         isCourseComplete={isCourseComplete}
         onShowCertificate={() => setShowCertificate(true)}
+        groupName={myGroup?.name}
+        nextClassText={upcoming ? `Próxima clase: ${classWhen(upcoming)}` : null}
       />
 
       {/* Main Layout with Content + Sidebar */}

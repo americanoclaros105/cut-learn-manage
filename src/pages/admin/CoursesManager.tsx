@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
-import { Plus, Edit, Trash2, BookOpen, Clock, Loader2, Eye, Users } from 'lucide-react';
+import { Plus, Edit, Trash2, BookOpen, Clock, Loader2, Eye, Users, ClipboardList } from 'lucide-react';
 
 export const CoursesManager = () => {
   const navigate = useNavigate();
@@ -183,6 +183,18 @@ export const CoursesManager = () => {
 
                       {/* Actions */}
                       <div className="flex gap-2 ml-4">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="gap-2"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigate(`/admin/cursos/${course.id}/grupos`);
+                          }}
+                        >
+                          <ClipboardList className="w-4 h-4" />
+                          <span className="hidden sm:inline">Grupos</span>
+                        </Button>
                         <Button
                           size="sm"
                           variant="outline"

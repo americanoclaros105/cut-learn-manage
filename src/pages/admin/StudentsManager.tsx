@@ -1,39 +1,18 @@
 import { useState, useMemo } from 'react';
-import { 
-  useStudents, 
-  useCreateStudent, 
-  useUpdateStudent, 
-  useUpdateStudentPassword,
-  useDeleteStudent,
-  StudentProfile,
-  CourseAssignment 
-} from '@/hooks/useStudents';
+import { useNavigate } from 'react-router-dom';
+import { useStudents, StudentProfile, CourseAssignment } from '@/hooks/useStudents';
 import { useCourses } from '@/hooks/useCourses';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { toast } from 'sonner';
 import { Loader2, Plus, Users } from 'lucide-react';
 import { StudentCard } from '@/components/admin/students/StudentCard';
 import { StudentFilters } from '@/components/admin/students/StudentFilters';
-import { StudentForm, StudentFormData } from '@/components/admin/students/StudentForm';
-import { PasswordDialog } from '@/components/admin/students/PasswordDialog';
-import { DeleteDialog } from '@/components/admin/students/DeleteDialog';
 
 export const StudentsManager = () => {
   const { data: students = [], isLoading: loadingStudents } = useStudents();
   const { data: courses = [], isLoading: loadingCourses } = useCourses();
-  const createStudent = useCreateStudent();
-  const updateStudent = useUpdateStudent();
-  const updatePassword = useUpdateStudentPassword();
-  const deleteStudent = useDeleteStudent();
-  
-  // UI State
-  const [formOpen, setFormOpen] = useState(false);
-  const [formMode, setFormMode] = useState<'create' | 'edit'>('create');
-  const [selectedStudent, setSelectedStudent] = useState<StudentProfile | null>(null);
-  const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  
+  const navigate = useNavigate();
+
   // Filters
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -87,99 +66,9 @@ export const StudentsManager = () => {
     return result;
   }, [students, search, statusFilter, courseFilter, sortBy]);
 
-  const handleOpenCreate = () => {
-    setSelectedStudent(null);
-    setFormMode('create');
-    setFormOpen(true);
-  };
-
-  const handleOpenEdit = (student: StudentProfile) => {
-    setSelectedStudent(student);
-    setFormMode('edit');
-    setFormOpen(true);
-  };
-
-  const handleOpenPasswordDialog = (student: StudentProfile) => {
-    setSelectedStudent(student);
-    setPasswordDialogOpen(true);
-  };
-
-  const handleOpenDeleteDialog = (student: StudentProfile) => {
-    setSelectedStudent(student);
-    setDeleteDialogOpen(true);
-  };
-
-  const handleSaveStudent = async (data: StudentFormData) => {
-    try {
-      if (formMode === 'create') {
-        await createStudent.mutateAsync({
-          email: data.email!,
-          password: data.password!,
-          name: data.name,
-          phone: data.phone || undefined,
-          avatar: data.avatar || undefined,
-          status: data.status,
-          enabled_from: data.enabled_from,
-          expires_at: data.expires_at,
-          notes: data.notes || undefined,
-          courses: data.courses,
-        });
-        toast.success('Estudiante creado correctamente');
-      } else if (selectedStudent) {
-        await updateStudent.mutateAsync({
-          id: selectedStudent.id,
-          name: data.name,
-          phone: data.phone || null,
-          avatar: data.avatar || null,
-          status: data.status,
-          enabled_from: data.enabled_from,
-          expires_at: data.expires_at,
-          notes: data.notes || null,
-          assigned_courses: data.courses as CourseAssignment[],
-        });
-        toast.success('Estudiante actualizado correctamente');
-      }
-      setFormOpen(false);
-      setSelectedStudent(null);
-    } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
-      toast.error(formMode === 'create' 
-        ? `Error al crear el estudiante: ${errorMessage}` 
-        : `Error al actualizar el estudiante: ${errorMessage}`
-      );
-    }
-  };
-
-  const handleUpdatePassword = async (password: string) => {
-    if (!selectedStudent) return;
-    
-    try {
-      await updatePassword.mutateAsync({
-        studentId: selectedStudent.id,
-        newPassword: password,
-      });
-      toast.success('Contraseña actualizada correctamente');
-      setPasswordDialogOpen(false);
-      setSelectedStudent(null);
-    } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
-      toast.error(`Error al actualizar la contraseña: ${errorMessage}`);
-    }
-  };
-
-  const handleDeleteStudent = async () => {
-    if (!selectedStudent) return;
-    
-    try {
-      await deleteStudent.mutateAsync(selectedStudent.id);
-      toast.success('Estudiante eliminado correctamente');
-      setDeleteDialogOpen(false);
-      setSelectedStudent(null);
-    } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
-      toast.error(`Error al eliminar el estudiante: ${errorMessage}`);
-    }
-  };
+  const handleOpenCreate = () => navigate('/admin/estudiantes/nuevo');
+  const handleOpen = (student: StudentProfile) => navigate(`/admin/estudiantes/${student.id}`);
+  const handleOpenAccess = (student: StudentProfile) => navigate(`/admin/estudiantes/${student.id}?tab=acceso`);
 
   const publishedCourses = courses.filter(c => c.status === 'published');
 
@@ -252,42 +141,14 @@ export const StudentsManager = () => {
               key={student.id}
               student={student}
               courses={publishedCourses}
-              onEdit={handleOpenEdit}
-              onChangePassword={handleOpenPasswordDialog}
-              onDelete={handleOpenDeleteDialog}
+              onOpen={handleOpen}
+              onEdit={handleOpen}
+              onChangePassword={handleOpenAccess}
+              onDelete={handleOpenAccess}
             />
           ))
         )}
       </div>
-
-      {/* Create/Edit Form */}
-      <StudentForm
-        open={formOpen}
-        onOpenChange={setFormOpen}
-        student={selectedStudent}
-        courses={publishedCourses}
-        onSave={handleSaveStudent}
-        isLoading={createStudent.isPending || updateStudent.isPending}
-        mode={formMode}
-      />
-
-      {/* Password Dialog */}
-      <PasswordDialog
-        open={passwordDialogOpen}
-        onOpenChange={setPasswordDialogOpen}
-        studentName={selectedStudent?.name || ''}
-        onSave={handleUpdatePassword}
-        isLoading={updatePassword.isPending}
-      />
-
-      {/* Delete Confirmation */}
-      <DeleteDialog
-        open={deleteDialogOpen}
-        onOpenChange={setDeleteDialogOpen}
-        studentName={selectedStudent?.name || ''}
-        onConfirm={handleDeleteStudent}
-        isLoading={deleteStudent.isPending}
-      />
     </div>
   );
 };

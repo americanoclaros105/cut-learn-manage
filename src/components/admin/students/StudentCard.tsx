@@ -13,6 +13,25 @@ import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { BookOpen, Calendar, Edit, Key, MoreVertical, Phone, Trash2, User } from "lucide-react";
 import type { StudentProfile, CourseAssignment } from "@/hooks/useStudents";
+import { effectiveAccess, enrollmentBalance, enrollmentStatusLabels, formatCOP } from "@/lib/operations";
+import type { EffectiveAccess } from "@/types";
+
+const enrollmentBadgeClass: Record<EffectiveAccess, string> = {
+  active: 'bg-green-100 text-green-700',
+  pending: 'bg-amber-100 text-amber-700',
+  suspended: 'bg-red-100 text-red-700',
+  cancelled: 'bg-gray-100 text-gray-600',
+  not_started: 'bg-blue-100 text-blue-700',
+  expired: 'bg-red-100 text-red-700',
+  account_inactive: 'bg-red-100 text-red-700',
+};
+
+const accessLabel = (assignment: CourseAssignment): string => {
+  const access = effectiveAccess(assignment);
+  if (access === 'not_started') return 'Aún no inicia';
+  if (access === 'expired') return 'Expirado';
+  return enrollmentStatusLabels[assignment.status];
+};
 
 interface Course {
   id: string;
@@ -22,6 +41,8 @@ interface Course {
 interface StudentCardProps {
   student: StudentProfile;
   courses: Course[];
+  /** Opens the student page (card click and name). */
+  onOpen: (student: StudentProfile) => void;
   onEdit: (student: StudentProfile) => void;
   onChangePassword: (student: StudentProfile) => void;
   onDelete: (student: StudentProfile) => void;
@@ -33,7 +54,7 @@ const statusConfig = {
   suspended: { label: 'Suspendido', variant: 'destructive' as const, className: '' },
 };
 
-export function StudentCard({ student, courses, onEdit, onChangePassword, onDelete }: StudentCardProps) {
+export function StudentCard({ student, courses, onOpen, onEdit, onChangePassword, onDelete }: StudentCardProps) {
   const status = statusConfig[student.status] || statusConfig.active;
   const initials = student.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
   
@@ -54,7 +75,7 @@ export function StudentCard({ student, courses, onEdit, onChangePassword, onDele
     : null;
 
   return (
-    <Card className="hover:shadow-md transition-shadow">
+    <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => onOpen(student)}>
       <CardContent className="p-4">
         <div className="flex items-start gap-4">
           {/* Avatar */}
@@ -68,7 +89,18 @@ export function StudentCard({ student, courses, onEdit, onChangePassword, onDele
           {/* Info */}
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
-              <h3 className="font-semibold text-lg truncate">{student.name}</h3>
+              <h3 className="font-semibold text-lg truncate">
+                <button
+                  type="button"
+                  className="max-w-full truncate text-left hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onOpen(student);
+                  }}
+                >
+                  {student.name}
+                </button>
+              </h3>
               <Badge variant={status.variant} className={status.className}>
                 {status.label}
               </Badge>
@@ -106,13 +138,25 @@ export function StudentCard({ student, courses, onEdit, onChangePassword, onDele
                 <div className="flex flex-wrap gap-1">
                   {assignedCourses.slice(0, 3).map((assignment: CourseAssignment) => {
                     const courseExpired = assignment.expires_at && new Date(assignment.expires_at) < new Date();
+                    const accessStyle = enrollmentBadgeClass[effectiveAccess(assignment)];
+                    const balance = enrollmentBalance(assignment.agreed_price, [
+                      { amount: assignment.paid_total ?? 0 },
+                    ]);
                     return (
-                      <Badge 
-                        key={assignment.course_id} 
-                        variant="outline" 
+                      <Badge
+                        key={assignment.course_id}
+                        variant="outline"
                         className={`text-xs ${courseExpired ? 'border-red-300 text-red-600' : ''}`}
                       >
+                        <span className={`mr-1.5 rounded px-1 ${accessStyle}`}>
+                          {accessLabel(assignment)}
+                        </span>
                         {getCourseTitle(assignment.course_id)}
+                        {assignment.status === 'pending' && balance.balance > 0 && (
+                          <span className="ml-1 opacity-70">
+                            · saldo {formatCOP(balance.balance)}
+                          </span>
+                        )}
                         {assignment.expires_at && (
                           <span className="ml-1 opacity-70">
                             → {formatDate(assignment.expires_at)}
@@ -141,11 +185,11 @@ export function StudentCard({ student, courses, onEdit, onChangePassword, onDele
           {/* Actions */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="shrink-0">
+              <Button variant="ghost" size="icon" className="shrink-0" aria-label={`Acciones de ${student.name}`} onClick={(e) => e.stopPropagation()}>
                 <MoreVertical className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
+            <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
               <DropdownMenuItem onClick={() => onEdit(student)}>
                 <Edit className="h-4 w-4 mr-2" />
                 Editar

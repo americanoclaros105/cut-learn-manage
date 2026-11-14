@@ -15,6 +15,9 @@ interface CoursePlayerHeaderProps {
   onToggleSidebar?: () => void;
   isCourseComplete?: boolean;
   onShowCertificate?: () => void;
+  /** The student's group for this course and its next class, e.g. "Próxima clase: mié 18 nov, 6:00 p. m.". */
+  groupName?: string;
+  nextClassText?: string | null;
 }
 
 export const CoursePlayerHeader = ({
@@ -26,6 +29,8 @@ export const CoursePlayerHeader = ({
   onToggleSidebar,
   isCourseComplete,
   onShowCertificate,
+  groupName,
+  nextClassText,
 }: CoursePlayerHeaderProps) => {
   const navigate = useNavigate();
 
@@ -70,6 +75,12 @@ export const CoursePlayerHeader = ({
           <p className="text-xs text-muted-foreground hidden sm:block">
             {completedCount}/{totalLessons} lecciones completadas
           </p>
+          {groupName && (
+            <p className="hidden sm:flex items-center gap-1.5 text-xs">
+              <span className="rounded-full bg-primary/10 px-2 py-0.5 font-medium text-primary">{groupName}</span>
+              {nextClassText && <span className="truncate text-muted-foreground">{nextClassText}</span>}
+            </p>
+          )}
         </div>
       </div>
 

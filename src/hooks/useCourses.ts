@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 export interface CourseTheme {
   primary: string;
@@ -81,7 +82,11 @@ export interface CourseWithStats extends Course {
   lesson_count: number;
 }
 
-export const useCoursesWithStats = (options?: { status?: 'published' | 'draft' | 'archived' }) => {
+export const useCoursesWithStats = (options?: {
+  status?: 'published' | 'draft' | 'archived';
+  /** Show a toast when lesson counts cannot be loaded (admin contexts). The landing stays silent. */
+  notifyOnCountsError?: boolean;
+}) => {
   return useQuery({
     queryKey: ['courses-with-stats', options?.status],
     queryFn: async () => {
@@ -97,22 +102,21 @@ export const useCoursesWithStats = (options?: { status?: 'published' | 'draft' |
       const { data: courses, error } = await query;
       if (error) throw error;
 
-      // Get lesson counts for each course
-      const coursesWithStats = await Promise.all(
-        (courses || []).map(async (course) => {
-          const { count } = await supabase
-            .from('lessons')
-            .select('*, modules!inner(course_id)', { count: 'exact', head: true })
-            .eq('modules.course_id', course.id);
-          
-          return { 
-            ...course, 
-            lesson_count: count || 0 
-          } as unknown as CourseWithStats;
-        })
-      );
-      
-      return coursesWithStats;
+      // Lessons are no longer readable by anonymous visitors (RLS), so counts
+      // come from a content-free SECURITY DEFINER function.
+      const { data: counts, error: countsError } = await supabase.rpc('course_outline_counts');
+      if (countsError) {
+        // Keep the course list usable (the landing must not break) but never
+        // fail silently: log it and, in admin contexts, tell the user.
+        console.error('course_outline_counts failed', countsError);
+        if (options?.notifyOnCountsError) toast.error('No se pudo cargar el conteo de lecciones');
+      }
+      const lessonCounts = new Map((counts || []).map((c) => [c.course_id, c.lesson_count]));
+
+      return (courses || []).map((course) => ({
+        ...course,
+        lesson_count: lessonCounts.get(course.id) ?? 0,
+      })) as unknown as CourseWithStats[];
     },
   });
 };

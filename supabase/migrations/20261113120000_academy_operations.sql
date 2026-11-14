@@ -153,9 +153,11 @@ CREATE TRIGGER enrollment_set_defaults_trg
   BEFORE INSERT ON public.user_course_assignments
   FOR EACH ROW EXECUTE FUNCTION public.enrollment_set_defaults();
 
--- BEFORE UPDATE: track status changes. A change to 'active' that did not come
--- with an explicit activated_by (i.e. not the payment automation) is a manual
--- grant made by an admin.
+-- BEFORE UPDATE: track status changes. The payment automation
+-- (recompute_enrollment_access) marks its own UPDATE by setting the
+-- transaction-local flag app.enrollment_auto = 'on'. Any other change to
+-- 'active' is a manual grant by an admin. Leaving 'active' clears the
+-- activation source so a later re-activation is labelled correctly.
 CREATE OR REPLACE FUNCTION public.enrollment_track_status()
 RETURNS TRIGGER
 LANGUAGE plpgsql
@@ -164,9 +166,16 @@ AS $$
 BEGIN
   IF NEW.status IS DISTINCT FROM OLD.status THEN
     NEW.status_changed_at := now();
-    IF NEW.status = 'active' AND NEW.activated_by IS NOT DISTINCT FROM OLD.activated_by THEN
-      NEW.activated_by := 'manual';
+    IF NEW.status = 'active' THEN
+      IF current_setting('app.enrollment_auto', true) = 'on' THEN
+        NEW.activated_by := 'payment';
+      ELSE
+        NEW.activated_by := 'manual';
+      END IF;
       NEW.activated_at := now();
+    ELSE
+      NEW.activated_by := NULL;
+      NEW.activated_at := NULL;
     END IF;
   END IF;
   RETURN NEW;
@@ -212,22 +221,30 @@ BEGIN
   WHERE enrollment_id = _enrollment_id AND voided_at IS NULL;
 
   IF _enrollment.status = 'pending' AND _paid >= _enrollment.agreed_price THEN
+    -- Transaction-local flag read by enrollment_track_status(): this UPDATE is
+    -- the automation, not a manual grant.
+    PERFORM set_config('app.enrollment_auto', 'on', true);
     UPDATE public.user_course_assignments
-    SET status = 'active', activated_by = 'payment', activated_at = now()
+    SET status = 'active'
     WHERE id = _enrollment_id;
+    PERFORM set_config('app.enrollment_auto', 'off', true);
   ELSIF _enrollment.status = 'active'
         AND _enrollment.activated_by = 'payment'
         AND _paid < _enrollment.agreed_price THEN
+    PERFORM set_config('app.enrollment_auto', 'on', true);
     UPDATE public.user_course_assignments
-    SET status = 'pending', activated_by = NULL, activated_at = NULL
+    SET status = 'pending'
     WHERE id = _enrollment_id;
+    PERFORM set_config('app.enrollment_auto', 'off', true);
   END IF;
 END;
 $$;
 
 REVOKE ALL ON FUNCTION public.recompute_enrollment_access(UUID) FROM PUBLIC, anon, authenticated;
 
--- Payments: fill snapshots (BEFORE INSERT).
+-- Payments: fill snapshots (BEFORE INSERT, and when the payment is moved to
+-- another enrollment). Setting enrollment_id to NULL (ON DELETE SET NULL on
+-- the enrollment) keeps the existing snapshots untouched.
 CREATE OR REPLACE FUNCTION public.payments_fill_snapshot()
 RETURNS TRIGGER
 LANGUAGE plpgsql
@@ -253,7 +270,7 @@ $$;
 
 DROP TRIGGER IF EXISTS payments_fill_snapshot_trg ON public.payments;
 CREATE TRIGGER payments_fill_snapshot_trg
-  BEFORE INSERT ON public.payments
+  BEFORE INSERT OR UPDATE OF enrollment_id ON public.payments
   FOR EACH ROW EXECUTE FUNCTION public.payments_fill_snapshot();
 
 -- Payments: recompute access after any relevant change (AFTER INSERT/UPDATE).
@@ -304,6 +321,30 @@ CREATE TRIGGER enrollment_recompute_after_price_trg
   WHEN (NEW.agreed_price IS DISTINCT FROM OLD.agreed_price)
   EXECUTE FUNCTION public.enrollment_recompute_access();
 
+-- When an enrollment returns to 'pending' by hand (e.g. un-suspended), a fully
+-- paid enrollment must become active at once. The automation's own UPDATEs set
+-- app.enrollment_auto = 'on', which stops this trigger from recursing.
+CREATE OR REPLACE FUNCTION public.enrollment_recompute_on_status()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  IF current_setting('app.enrollment_auto', true) IS DISTINCT FROM 'on' THEN
+    PERFORM public.recompute_enrollment_access(NEW.id);
+  END IF;
+  RETURN NULL;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS enrollment_recompute_after_status_trg ON public.user_course_assignments;
+CREATE TRIGGER enrollment_recompute_after_status_trg
+  AFTER UPDATE OF status ON public.user_course_assignments
+  FOR EACH ROW
+  WHEN (NEW.status = 'pending' AND OLD.status IS DISTINCT FROM NEW.status)
+  EXECUTE FUNCTION public.enrollment_recompute_on_status();
+
 -- ---------------------------------------------------------------------------
 -- 7. Course access helper (used by RLS)
 -- ---------------------------------------------------------------------------
@@ -333,7 +374,8 @@ GRANT EXECUTE ON FUNCTION public.has_course_access(UUID, UUID) TO anon, authenti
 
 -- Public, content-free outline counts for the landing page. Modules/lessons are
 -- no longer readable by anonymous users, so the landing reads counts through
--- this function instead. Only published courses are exposed.
+-- this function instead. Anonymous users and students only see published
+-- courses; superadmins see every course (drafts and archived included).
 CREATE OR REPLACE FUNCTION public.course_outline_counts()
 RETURNS TABLE (course_id UUID, module_count INTEGER, lesson_count INTEGER)
 LANGUAGE sql
@@ -348,10 +390,68 @@ AS $$
        FROM public.lessons l JOIN public.modules m ON m.id = l.module_id
        WHERE m.course_id = c.id)
   FROM public.courses c
-  WHERE c.status = 'published';
+  WHERE c.status = 'published' OR public.has_role(auth.uid(), 'superadmin');
 $$;
 
 GRANT EXECUTE ON FUNCTION public.course_outline_counts() TO anon, authenticated;
+
+-- Atomic apply of a student's desired enrollments (used by the admin student
+-- form). _items is a jsonb array of
+--   {course_id, enabled_from, expires_at, notes, agreed_price}
+-- Courses missing from the list are unenrolled, new ones inserted (pending),
+-- existing ones updated. Everything runs in a single transaction, so a failure
+-- leaves the student's enrollments untouched.
+CREATE OR REPLACE FUNCTION public.apply_student_enrollments(_user_id UUID, _items JSONB)
+RETURNS VOID
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  _item JSONB;
+  _course UUID;
+  _ids UUID[] := ARRAY[]::UUID[];
+BEGIN
+  IF NOT public.has_role(auth.uid(), 'superadmin') THEN
+    RAISE EXCEPTION 'Only superadmins can manage enrollments' USING ERRCODE = '42501';
+  END IF;
+
+  IF _items IS NULL OR jsonb_typeof(_items) <> 'array' THEN
+    RAISE EXCEPTION '_items must be a JSON array';
+  END IF;
+
+  FOR _item IN SELECT * FROM jsonb_array_elements(_items) LOOP
+    _course := (_item ->> 'course_id')::UUID;
+    _ids := _ids || _course;
+
+    INSERT INTO public.user_course_assignments
+      (user_id, course_id, enabled_from, expires_at, notes, agreed_price)
+    VALUES (
+      _user_id,
+      _course,
+      COALESCE(NULLIF(_item ->> 'enabled_from', '')::TIMESTAMPTZ, now()),
+      NULLIF(_item ->> 'expires_at', '')::TIMESTAMPTZ,
+      NULLIF(_item ->> 'notes', ''),
+      NULLIF(_item ->> 'agreed_price', '')::NUMERIC
+    )
+    ON CONFLICT (user_id, course_id) DO UPDATE SET
+      enabled_from = COALESCE(NULLIF(_item ->> 'enabled_from', '')::TIMESTAMPTZ, now()),
+      expires_at   = NULLIF(_item ->> 'expires_at', '')::TIMESTAMPTZ,
+      notes        = NULLIF(_item ->> 'notes', ''),
+      -- keep the current price when the caller does not send one
+      agreed_price = COALESCE(
+        NULLIF(_item ->> 'agreed_price', '')::NUMERIC,
+        public.user_course_assignments.agreed_price
+      );
+  END LOOP;
+
+  DELETE FROM public.user_course_assignments
+  WHERE user_id = _user_id AND NOT (course_id = ANY (_ids));
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.apply_student_enrollments(UUID, JSONB) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.apply_student_enrollments(UUID, JSONB) TO authenticated;
 
 -- ---------------------------------------------------------------------------
 -- 8. Row level security

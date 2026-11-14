@@ -70,5 +70,26 @@ published modules/lessons).
 - Delivery decisions: payments have no DELETE policy (void only); `modules`/`lessons` SELECT now requires
   `has_course_access` (storage buckets still public, out of scope).
 
+## Review findings (native review of T1+T2, fixed in `fix(db): harden enrollment access automation after review`)
+Route: delegated writer (2+ non-trivial files). Migration edited in place (never applied anywhere yet).
+1. Payment activation relabelled manual: `recompute_enrollment_access` sets the transaction-local flag
+   `app.enrollment_auto = 'on'` around its UPDATE; `enrollment_track_status` labels a change to 'active' as
+   'payment' when the flag is on, otherwise 'manual'. Leaving 'active' clears activated_by/activated_at.
+2. Recompute on status change: new AFTER UPDATE OF status trigger (WHEN new status = 'pending') calls
+   recompute; skipped when the flag is on (no recursion), so un-suspend of a fully paid enrollment activates it.
+3. Stale snapshots: `payments_fill_snapshot` now runs BEFORE INSERT OR UPDATE OF enrollment_id; NULL
+   enrollment_id (ON DELETE SET NULL) leaves snapshots untouched.
+4. Profile status mismatch: `effectiveAccess(enrollment, now, profile?)` returns `account_inactive` when the
+   profile is not active (TDD, RED then GREEN); message "Cuenta inactiva"; `useMyEnrollments` passes the
+   profile. Profile enabled_from/expires_at are NOT checked on either side (server ignores them too, and the
+   default expires_at is now()+1 year, so enforcing it would be a behaviour change).
+5. Draft lesson counts: `course_outline_counts()` returns all courses for superadmins; `useCoursesWithStats`
+   logs RPC errors and toasts when `notifyOnCountsError` is set (landing stays silent/resilient).
+6. Non-atomic enrollment update: moved to SECURITY DEFINER RPC `apply_student_enrollments(_user_id, _items)`
+   (superadmin only, one transaction: upsert then delete). `useUpdateStudent` calls it; `diffEnrollments`
+   stays in the domain module (tested) but is no longer used by the hook.
+7. Tests: `supabase/tests/academy_operations.test.sql` (BEGIN ... ROLLBACK, assertions T1-T10). Written by
+   careful reading; NOT executed (no DB access from the writer).
+
 ## Next step
 T3 Roster + attendance UI.

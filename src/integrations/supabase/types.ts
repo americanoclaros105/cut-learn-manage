@@ -662,6 +662,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      apply_student_enrollments: {
+        Args: { _items: Json; _user_id: string }
+        Returns: undefined
+      }
       course_outline_counts: {
         Args: never
         Returns: {

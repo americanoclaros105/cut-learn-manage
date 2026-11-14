@@ -8,6 +8,7 @@ import type {
   EnrollmentStatus,
   PaymentLike,
   PaymentMethod,
+  ProfileLike,
 } from '@/types';
 
 /**
@@ -55,8 +56,18 @@ export const enrollmentBalance = (
   return { paid, balance: agreed - paid, isFullyPaid: paid >= agreed };
 };
 
-export const effectiveAccess = (enrollment: EnrollmentLike, now: Date = new Date()): EffectiveAccess => {
+/**
+ * Mirrors the server-side `has_course_access`: besides the enrollment, the
+ * student's profile must be 'active'. When the profile is unknown (null or
+ * undefined) it is not considered, so admin views without it keep working.
+ */
+export const effectiveAccess = (
+  enrollment: EnrollmentLike,
+  now: Date = new Date(),
+  profile?: ProfileLike | null,
+): EffectiveAccess => {
   if (enrollment.status !== 'active') return enrollment.status;
+  if (profile && profile.status !== 'active') return 'account_inactive';
   const t = now.getTime();
   if (enrollment.enabled_from && new Date(enrollment.enabled_from).getTime() > t) return 'not_started';
   if (enrollment.expires_at && new Date(enrollment.expires_at).getTime() <= t) return 'expired';
@@ -148,6 +159,11 @@ export const accessBlockedMessage = (
       };
     case 'suspended':
       return { title: 'Acceso suspendido', detail: 'Tu acceso a este curso está suspendido temporalmente.' };
+    case 'account_inactive':
+      return {
+        title: 'Cuenta inactiva',
+        detail: 'Tu cuenta no está activa en este momento. Contacta a la academia para reactivarla.',
+      };
     case 'cancelled':
       return { title: 'Inscripción cancelada', detail: 'Esta inscripción fue cancelada.' };
     default:

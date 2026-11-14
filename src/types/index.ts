@@ -155,12 +155,18 @@ export type EffectiveAccess =
   | 'suspended'
   | 'cancelled'
   | 'not_started'
-  | 'expired';
+  | 'expired'
+  | 'account_inactive';
 
 export interface EnrollmentLike {
   status: EnrollmentStatus;
   enabled_from: string | null;
   expires_at: string | null;
+}
+
+/** Minimal profile shape needed to decide course access. */
+export interface ProfileLike {
+  status: 'active' | 'inactive' | 'suspended';
 }
 
 export interface PaymentLike {

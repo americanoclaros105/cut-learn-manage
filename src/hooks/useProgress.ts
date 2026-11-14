@@ -117,6 +117,14 @@ export const useMyEnrollments = () => {
         .eq('user_id', user.id);
       if (paymentsError) throw paymentsError;
 
+      // Server-side access also requires an active profile (has_course_access).
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('status')
+        .eq('id', user.id)
+        .maybeSingle();
+      if (profileError) throw profileError;
+
       const now = new Date();
       return (enrollments || []).map((e) => {
         const { paid, balance } = enrollmentBalance(
@@ -128,7 +136,7 @@ export const useMyEnrollments = () => {
           agreed_price: Number(e.agreed_price),
           paid,
           balance,
-          access: effectiveAccess(e, now),
+          access: effectiveAccess(e, now, profile),
         };
       });
     },

@@ -23,6 +23,7 @@ const enrollmentBadgeClass: Record<EffectiveAccess, string> = {
   cancelled: 'bg-gray-100 text-gray-600',
   not_started: 'bg-blue-100 text-blue-700',
   expired: 'bg-red-100 text-red-700',
+  account_inactive: 'bg-red-100 text-red-700',
 };
 
 const accessLabel = (assignment: CourseAssignment): string => {

@@ -1,6 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { diffEnrollments } from '@/lib/operations';
 import type { EnrollmentStatus } from '@/types';
 
 type RawAssignment = Omit<CourseAssignment, 'paid_total' | 'payment_count'>;
@@ -201,54 +200,20 @@ export const useUpdateStudent = () => {
 
       // Update course assignments if provided
       if (assigned_courses !== undefined) {
-        // Diff against the current enrollments instead of delete + reinsert, so
-        // status, activation source and payment links are preserved.
-        const { data: current, error: currentError } = await supabase
-          .from('user_course_assignments')
-          .select('id, course_id')
-          .eq('user_id', id);
-        if (currentError) throw currentError;
-
-        const { toInsert, toUpdate, toDelete } = diffEnrollments(current || [], assigned_courses);
-
-        if (toDelete.length > 0) {
-          const { error: deleteError } = await supabase
-            .from('user_course_assignments')
-            .delete()
-            .in('id', toDelete.map((e) => e.id));
-          if (deleteError) throw deleteError;
-        }
-
-        for (const enrollment of toUpdate) {
-          const { error: updateError } = await supabase
-            .from('user_course_assignments')
-            .update({
-              enabled_from: enrollment.enabled_from || new Date().toISOString(),
-              expires_at: enrollment.expires_at || null,
-              notes: enrollment.notes || null,
-              ...(enrollment.agreed_price !== undefined && { agreed_price: enrollment.agreed_price }),
-            })
-            .eq('id', enrollment.id);
-          if (updateError) throw updateError;
-        }
-
-        if (toInsert.length > 0) {
-          // New enrollments start as pending (column default); the agreed price
-          // falls back to the course price server-side when omitted.
-          const { error: insertError } = await supabase
-            .from('user_course_assignments')
-            .insert(
-              toInsert.map(course => ({
-                user_id: id,
-                course_id: course.course_id,
-                enabled_from: course.enabled_from || new Date().toISOString(),
-                expires_at: course.expires_at || null,
-                notes: course.notes || null,
-                agreed_price: course.agreed_price ?? null,
-              }))
-            );
-          if (insertError) throw insertError;
-        }
+        // Applied atomically server-side (single transaction): inserts, updates and
+        // removals succeed or fail together, and status / payment links of the
+        // enrollments that stay are preserved.
+        const { error: enrollmentsError } = await supabase.rpc('apply_student_enrollments', {
+          _user_id: id,
+          _items: assigned_courses.map((course) => ({
+            course_id: course.course_id,
+            enabled_from: course.enabled_from || null,
+            expires_at: course.expires_at || null,
+            notes: course.notes || null,
+            agreed_price: course.agreed_price ?? null,
+          })),
+        });
+        if (enrollmentsError) throw enrollmentsError;
       }
 
       return id;

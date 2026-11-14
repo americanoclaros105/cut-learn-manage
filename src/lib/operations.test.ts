@@ -81,6 +81,29 @@ describe('effectiveAccess', () => {
     const e = { status: 'pending' as const, enabled_from: '2026-07-01T00:00:00Z', expires_at: null };
     expect(effectiveAccess(e, now)).toBe('pending');
   });
+
+  it('is account_inactive when the student profile is not active', () => {
+    expect(effectiveAccess(base, now, { status: 'inactive' })).toBe('account_inactive');
+    expect(effectiveAccess(base, now, { status: 'suspended' })).toBe('account_inactive');
+  });
+
+  it('stays active when the profile is active or unknown', () => {
+    expect(effectiveAccess(base, now, { status: 'active' })).toBe('active');
+    expect(effectiveAccess(base, now, null)).toBe('active');
+    expect(effectiveAccess(base, now)).toBe('active');
+  });
+
+  it('enrollment status still wins over an inactive profile', () => {
+    expect(effectiveAccess({ ...base, status: 'pending' }, now, { status: 'inactive' })).toBe('pending');
+  });
+});
+
+describe('accessBlockedMessage account_inactive', () => {
+  it('explains that the account is inactive', () => {
+    const m = accessBlockedMessage('account_inactive', {});
+    expect(m.title).toBe('Cuenta inactiva');
+    expect(m.detail).toContain('cuenta');
+  });
 });
 
 describe('attendanceStats', () => {

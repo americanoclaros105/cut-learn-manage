@@ -105,3 +105,42 @@ export const useVoidPayment = () => {
     onSuccess: (_r, { courseId }) => invalidateOperations(queryClient, courseId),
   });
 };
+
+export interface LedgerData {
+  payments: PaymentRecord[];
+  /** Display names of the admins that registered or voided payments, by user id. */
+  staffNames: Record<string, string>;
+}
+
+const PAGE_SIZE = 1000;
+
+/** Every payment of the academy (voided included) for the accounting module. */
+export const useLedgerPayments = () =>
+  useQuery({
+    queryKey: operationsKeys.ledger,
+    queryFn: async (): Promise<LedgerData> => {
+      const payments: PaymentRecord[] = [];
+      for (let from = 0; ; from += PAGE_SIZE) {
+        const { data, error } = await supabase
+          .from('payments')
+          .select('*')
+          .order('paid_at', { ascending: false })
+          .order('created_at', { ascending: false })
+          .range(from, from + PAGE_SIZE - 1);
+        if (error) throw error;
+        payments.push(...(data || []).map(toPaymentRecord));
+        if (!data || data.length < PAGE_SIZE) break;
+      }
+
+      const staffIds = [
+        ...new Set(payments.flatMap((p) => [p.created_by, p.voided_by]).filter((id): id is string => !!id)),
+      ];
+      const staffNames: Record<string, string> = {};
+      for (let i = 0; i < staffIds.length; i += 100) {
+        const { data, error } = await supabase.from('profiles').select('id, name').in('id', staffIds.slice(i, i + 100));
+        if (error) throw error;
+        for (const profile of data || []) staffNames[profile.id] = profile.name;
+      }
+      return { payments, staffNames };
+    },
+  });

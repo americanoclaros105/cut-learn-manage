@@ -43,7 +43,7 @@ published modules/lessons).
 - [x] T2 Access gating: student hooks/pages honor enrollment status + dates; StudentForm creates pending
       enrollments with agreed price; admin student list shows enrollment status.
 - [x] T3 Roster + attendance UI: `/admin/cursos/:courseId/grupo` with tabs Inscritos / Asistencia.
-- [ ] T4 Accounting UI: `/admin/contabilidad` with KPIs, ledger, filters, register/void payment, CSV export.
+- [x] T4 Accounting UI: `/admin/contabilidad` with KPIs, ledger, filters, register/void payment, CSV export.
 - [ ] T5 Verification: build, lint, tests, browser walkthrough.
 
 ## Acceptance criteria
@@ -79,6 +79,16 @@ published modules/lessons).
   Checks: `npm test` 50 passed; `npm run build` OK; eslint clean on new files (CoursesManager/CourseEditor keep
   their pre-existing errors). Not exercised in a browser: needs the migration applied on a DB first.
 
+- T4: route delegated writer (2+ non-trivial files). Strict TDD for `src/lib/accounting.ts` (period ranges, ledger
+  filter/sort, KPIs by method/course, receivables, WhatsApp reminder text, CSV with BOM + `;` + formula
+  neutralization; RED "Cannot find module ./accounting" then 68 tests GREEN). `/admin/contabilidad`
+  (`src/pages/admin/Accounting.tsx`) with period selector, KPI cards, filterable ledger with "cargar mas",
+  void dialog (reason required), receivables tab and CSV export; sidebar entry "Contabilidad". Register-payment
+  dialog is the same component as in the roster (enrollment picked from a searchable student/course list).
+  The ledger is loaded in full (paged 1000 at a time) and filtered client side; fine for an academy-sized dataset.
+  Checks: `npm test` 68 passed; `npm run build` OK; eslint clean on new/touched files. Not exercised in a browser
+  (needs the migration applied).
+
 ## Review findings (native review of T1+T2, fixed in `fix(db): harden enrollment access automation after review`)
 Route: delegated writer (2+ non-trivial files). Migration edited in place (never applied anywhere yet).
 1. Payment activation relabelled manual: `recompute_enrollment_access` sets the transaction-local flag
@@ -101,4 +111,4 @@ Route: delegated writer (2+ non-trivial files). Migration edited in place (never
    careful reading; NOT executed (no DB access from the writer).
 
 ## Next step
-T3 Roster + attendance UI.
+T5: apply the migration, run `supabase/tests/academy_operations.test.sql`, browser walkthrough.

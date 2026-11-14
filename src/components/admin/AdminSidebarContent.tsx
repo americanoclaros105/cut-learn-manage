@@ -5,6 +5,7 @@ import {
   FileEdit,
   GraduationCap,
   Users,
+  Wallet,
   LogOut,
   Home,
 } from 'lucide-react';
@@ -16,6 +17,7 @@ const menuItems = [
   { icon: FileEdit, label: 'Editar Landing', path: '/admin/landing' },
   { icon: GraduationCap, label: 'Cursos', path: '/admin/cursos' },
   { icon: Users, label: 'Estudiantes', path: '/admin/estudiantes' },
+  { icon: Wallet, label: 'Contabilidad', path: '/admin/contabilidad' },
 ];
 
 interface AdminSidebarContentProps {

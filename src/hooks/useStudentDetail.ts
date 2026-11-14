@@ -8,12 +8,18 @@ import { toPaymentRecord, type PaymentRecord } from './usePayments';
  * `invalidateOperations` (which invalidates ['student']) refreshes all of them.
  */
 
+export interface StudentLedger {
+  payments: PaymentRecord[];
+  /** Display names of the admins that registered or voided payments, by user id. */
+  staffNames: Record<string, string>;
+}
+
 /** Every payment of the student (voided included), newest first. */
 export const useStudentPayments = (studentId: string) =>
   useQuery({
     queryKey: ['student', studentId, 'payments'],
     enabled: !!studentId,
-    queryFn: async (): Promise<PaymentRecord[]> => {
+    queryFn: async (): Promise<StudentLedger> => {
       const { data, error } = await supabase
         .from('payments')
         .select('*')
@@ -21,7 +27,18 @@ export const useStudentPayments = (studentId: string) =>
         .order('paid_at', { ascending: false })
         .order('created_at', { ascending: false });
       if (error) throw error;
-      return (data || []).map(toPaymentRecord);
+      const payments = (data || []).map(toPaymentRecord);
+
+      const staffIds = [
+        ...new Set(payments.flatMap((p) => [p.created_by, p.voided_by]).filter((id): id is string => !!id)),
+      ];
+      const staffNames: Record<string, string> = {};
+      if (staffIds.length > 0) {
+        const { data: staff, error: staffError } = await supabase.from('profiles').select('id, name').in('id', staffIds);
+        if (staffError) throw staffError;
+        for (const profile of staff || []) staffNames[profile.id] = profile.name;
+      }
+      return { payments, staffNames };
     },
   });
 

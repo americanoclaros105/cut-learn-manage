@@ -40,6 +40,8 @@ export const createStudentSchema = z
   .object({
     email: z.string().trim().email('Escribe un correo válido').max(255),
     password: z.string().min(6, 'La contraseña debe tener al menos 6 caracteres').max(72, 'Máximo 72 caracteres'),
+    /** Payment method shared by the optional initial payments. */
+    initial_method: z.enum(['cash', 'transfer', 'card', 'nequi', 'daviplata', 'other']),
     status: z.enum(['active', 'inactive', 'suspended']),
     enabled_from: day('desde cuándo está habilitada la cuenta'),
     expires_at: day('cuándo expira la cuenta'),

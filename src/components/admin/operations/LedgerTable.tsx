@@ -11,18 +11,20 @@ interface LedgerTableProps {
   payments: LedgerPayment[];
   staffNames: Record<string, string>;
   onVoid: (payment: LedgerPayment) => void;
+  /** Hides the student column when the ledger already belongs to one student. */
+  hideStudent?: boolean;
 }
 
 const formatDay = (value: string) => format(new Date(`${value.slice(0, 10)}T00:00:00`), 'dd MMM yyyy', { locale: es });
 
 /** Wide table: scrolls horizontally on small screens. */
-export const LedgerTable = ({ payments, staffNames, onVoid }: LedgerTableProps) => (
+export const LedgerTable = ({ payments, staffNames, onVoid, hideStudent }: LedgerTableProps) => (
   <div className="overflow-x-auto rounded-lg border bg-card">
     <Table>
       <TableHeader>
         <TableRow>
           <TableHead>Fecha</TableHead>
-          <TableHead>Estudiante</TableHead>
+          {!hideStudent && <TableHead>Estudiante</TableHead>}
           <TableHead>Curso</TableHead>
           <TableHead className="text-right">Monto</TableHead>
           <TableHead>Medio</TableHead>
@@ -41,7 +43,9 @@ export const LedgerTable = ({ payments, staffNames, onVoid }: LedgerTableProps) 
           return (
             <TableRow key={p.id}>
               <TableCell className={`whitespace-nowrap ${strike}`}>{formatDay(p.paid_at)}</TableCell>
-              <TableCell className={`font-medium ${strike}`}>{p.student_name ?? 'Estudiante eliminado'}</TableCell>
+              {!hideStudent && (
+                <TableCell className={`font-medium ${strike}`}>{p.student_name ?? 'Estudiante eliminado'}</TableCell>
+              )}
               <TableCell className={strike}>{p.course_title ?? 'Curso eliminado'}</TableCell>
               <TableCell className={`text-right tabular-nums ${strike}`}>{formatCOP(p.amount)}</TableCell>
               <TableCell className={strike}>{paymentMethodLabels[p.method]}</TableCell>

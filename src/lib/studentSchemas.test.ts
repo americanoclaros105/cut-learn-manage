@@ -49,6 +49,7 @@ describe('createStudentSchema', () => {
     avatar: '',
     email: 'ana@example.com',
     password: 'secret1',
+    initial_method: 'cash' as const,
     status: 'active' as const,
     enabled_from: '2026-01-01',
     expires_at: '2026-12-31',
@@ -78,6 +79,10 @@ describe('createStudentSchema', () => {
       enrollments: [{ course_id: 'c1', agreed_price: 1000, initial_payment: 2000 }],
     });
     expect(issuePaths(over)).toContain('enrollments.0.initial_payment');
+  });
+
+  it('rejects an unknown payment method for the initial payments', () => {
+    expect(issuePaths(createStudentSchema.safeParse({ ...base, initial_method: 'bitcoin' }))).toContain('initial_method');
   });
 
   it('allows creating a student without enrollments', () => {

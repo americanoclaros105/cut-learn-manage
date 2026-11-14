@@ -45,6 +45,10 @@ published modules/lessons).
 - [x] T3 Roster + attendance UI: `/admin/cursos/:courseId/grupo` with tabs Inscritos / Asistencia.
 - [x] T4 Accounting UI: `/admin/contabilidad` with KPIs, ledger, filters, register/void payment, CSV export.
 - [ ] T5 Verification: build, lint, tests, browser walkthrough.
+- [x] T6 Student full page (user request 2026-11-13): replace the StudentForm modal with
+      `/admin/estudiantes/nuevo` and `/admin/estudiantes/:studentId` — profile, account access, enrollments
+      with payments/balance/status actions, payment history, attendance, course progress, password, delete.
+      Migration applied to production by the user (dry run passed 11/11).
 
 ## Acceptance criteria
 - Enrolling a student creates a `pending` enrollment; student cannot open the course nor read its lessons (RLS).
@@ -88,6 +92,20 @@ published modules/lessons).
   The ledger is loaded in full (paged 1000 at a time) and filtered client side; fine for an academy-sized dataset.
   Checks: `npm test` 68 passed; `npm run build` OK; eslint clean on new/touched files. Not exercised in a browser
   (needs the migration applied).
+
+- T6: route delegated writer (2+ non-trivial files). Strict TDD for `src/lib/studentDetail.ts` (tabs, per-enrollment
+  summary, KPIs, delete impact + typed confirmation, password generator, initials; RED "Failed to load url
+  ./studentDetail" then GREEN) and `src/lib/studentSchemas.ts` (zod schemas + day<->ISO; RED then GREEN, 95 tests).
+  Commits `86bacc7` (domain + hooks) and the page commit below. Routes `/admin/estudiantes/nuevo` and
+  `/admin/estudiantes/:studentId?tab=resumen|datos|acceso|pagos|asistencia`; containers in `src/pages/admin/student/`,
+  presentational pieces in `src/components/admin/students/detail/`. StudentForm modal and DeleteDialog removed;
+  StudentsManager and StudentCard navigate to the pages. Status-action copy shared via
+  `operations/enrollmentStatusActions.tsx` (RosterTab now imports it); `LedgerTable` got `hideStudent`.
+  Limits: the student email is not stored in `profiles` and no edge function reads/changes it, so the page does not
+  show it (create form sets it once). No route blocker with BrowserRouter: unsaved edits are guarded on the back link
+  and `beforeunload`; sidebar links are not guarded (forms stay mounted across tabs). Not exercised in a browser.
+  Checks: `npm test` 95 passed; `npm run build` OK; `npx tsc --noEmit -p tsconfig.app.json` clean; eslint clean on all
+  new/touched files.
 
 ## Review findings (native review of T1+T2, fixed in `fix(db): harden enrollment access automation after review`)
 Route: delegated writer (2+ non-trivial files). Migration edited in place (never applied anywhere yet).

@@ -4,6 +4,7 @@ import { UserPlus, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ConfirmDialog } from '@/components/admin/operations/ConfirmDialog';
+import { statusActions, statusDescription, statusSuccessMessage, type StatusAction } from '@/components/admin/operations/enrollmentStatusActions';
 import { EditPriceDialog } from '@/components/admin/operations/EditPriceDialog';
 import { EnrollStudentDialog } from '@/components/admin/operations/EnrollStudentDialog';
 import { PaymentsSheet } from '@/components/admin/operations/PaymentsSheet';
@@ -15,7 +16,6 @@ import { useEnrollStudent, useUpdateEnrollment } from '@/hooks/useEnrollments';
 import { useCreatePayment, useEnrollmentPayments, useVoidPayment, type PaymentRecord } from '@/hooks/usePayments';
 import { useStudents } from '@/hooks/useStudents';
 import { filterRoster, statusCounts, type RosterRow, type RosterStatusFilter } from '@/lib/roster';
-import type { EnrollmentStatus } from '@/types';
 
 interface RosterTabProps {
   courseId: string;
@@ -26,38 +26,6 @@ interface RosterTabProps {
   error: boolean;
   onRetry: () => void;
 }
-
-type StatusAction = 'authorize' | 'suspend' | 'reactivate' | 'cancel';
-
-const statusActions: Record<StatusAction, { status: EnrollmentStatus; title: string; confirm: string; destructive?: boolean }> = {
-  authorize: { status: 'active', title: 'Autorizar acceso manual', confirm: 'Autorizar acceso' },
-  suspend: { status: 'suspended', title: 'Suspender inscripción', confirm: 'Suspender' },
-  reactivate: { status: 'pending', title: 'Reactivar inscripción', confirm: 'Reactivar' },
-  cancel: { status: 'cancelled', title: 'Cancelar inscripción', confirm: 'Cancelar inscripción', destructive: true },
-};
-
-const statusDescription = (action: StatusAction, name: string) => {
-  switch (action) {
-    case 'authorize':
-      return (
-        <p>
-          <strong>{name}</strong> tendrá acceso al curso <strong>sin importar el saldo pendiente</strong>. Esta autorización
-          no se revierte sola si se anulan pagos; solo la quitas suspendiendo la inscripción.
-        </p>
-      );
-    case 'suspend':
-      return <p>{name} perderá el acceso al curso hasta que reactives la inscripción. Los pagos se conservan.</p>;
-    case 'reactivate':
-      return (
-        <p>
-          La inscripción de {name} vuelve a pendiente. Si ya tiene el valor acordado pagado, el acceso se habilita
-          automáticamente; si no, queda a la espera del pago.
-        </p>
-      );
-    case 'cancel':
-      return <p>La inscripción de {name} se marca como cancelada y deja de contar en los totales. Los pagos se conservan en el historial.</p>;
-  }
-};
 
 /** Roster container: owns filters, dialogs and mutations; presentational pieces get props only. */
 export const RosterTab = ({ courseId, courseTitle, coursePrice, rows, loading, error, onRetry }: RosterTabProps) => {
@@ -121,15 +89,7 @@ export const RosterTab = ({ courseId, courseTitle, coursePrice, rows, loading, e
         courseId,
         patch: { status: statusActions[action].status },
       });
-      if (action === 'reactivate') {
-        toast.success(
-          result.status === 'active'
-            ? 'Inscripción reactivada: ya estaba pagada, acceso habilitado'
-            : 'Inscripción reactivada: queda pendiente de pago',
-        );
-      } else if (action === 'authorize') toast.success('Acceso autorizado manualmente');
-      else if (action === 'suspend') toast.success('Inscripción suspendida');
-      else toast.success('Inscripción cancelada');
+      toast.success(statusSuccessMessage(action, result.status));
     } catch (e) {
       console.error(e);
       toast.error('No se pudo actualizar la inscripción');

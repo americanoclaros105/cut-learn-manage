@@ -41,6 +41,8 @@ interface Course {
 interface StudentCardProps {
   student: StudentProfile;
   courses: Course[];
+  /** Opens the student page (card click and name). */
+  onOpen: (student: StudentProfile) => void;
   onEdit: (student: StudentProfile) => void;
   onChangePassword: (student: StudentProfile) => void;
   onDelete: (student: StudentProfile) => void;
@@ -52,7 +54,7 @@ const statusConfig = {
   suspended: { label: 'Suspendido', variant: 'destructive' as const, className: '' },
 };
 
-export function StudentCard({ student, courses, onEdit, onChangePassword, onDelete }: StudentCardProps) {
+export function StudentCard({ student, courses, onOpen, onEdit, onChangePassword, onDelete }: StudentCardProps) {
   const status = statusConfig[student.status] || statusConfig.active;
   const initials = student.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
   
@@ -73,7 +75,7 @@ export function StudentCard({ student, courses, onEdit, onChangePassword, onDele
     : null;
 
   return (
-    <Card className="hover:shadow-md transition-shadow">
+    <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => onOpen(student)}>
       <CardContent className="p-4">
         <div className="flex items-start gap-4">
           {/* Avatar */}
@@ -87,7 +89,18 @@ export function StudentCard({ student, courses, onEdit, onChangePassword, onDele
           {/* Info */}
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
-              <h3 className="font-semibold text-lg truncate">{student.name}</h3>
+              <h3 className="font-semibold text-lg truncate">
+                <button
+                  type="button"
+                  className="max-w-full truncate text-left hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onOpen(student);
+                  }}
+                >
+                  {student.name}
+                </button>
+              </h3>
               <Badge variant={status.variant} className={status.className}>
                 {status.label}
               </Badge>
@@ -172,11 +185,11 @@ export function StudentCard({ student, courses, onEdit, onChangePassword, onDele
           {/* Actions */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="shrink-0">
+              <Button variant="ghost" size="icon" className="shrink-0" aria-label={`Acciones de ${student.name}`} onClick={(e) => e.stopPropagation()}>
                 <MoreVertical className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
+            <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
               <DropdownMenuItem onClick={() => onEdit(student)}>
                 <Edit className="h-4 w-4 mr-2" />
                 Editar

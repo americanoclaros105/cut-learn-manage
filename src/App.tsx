@@ -23,6 +23,8 @@ import { CourseEditor } from "./pages/admin/CourseEditor";
 import { StudentsManager } from "./pages/admin/StudentsManager";
 import { CourseGroup } from "./pages/admin/CourseGroup";
 import { Accounting } from "./pages/admin/Accounting";
+import { StudentCreate } from "./pages/admin/student/StudentCreate";
+import { StudentDetail } from "./pages/admin/student/StudentDetail";
 
 // Student Pages
 import { StudentDashboard } from "./pages/student/StudentDashboard";
@@ -58,6 +60,8 @@ const App = () => (
               <Route path="cursos/:courseId" element={<CourseEditor />} />
               <Route path="cursos/:courseId/grupo" element={<CourseGroup />} />
               <Route path="estudiantes" element={<StudentsManager />} />
+              <Route path="estudiantes/nuevo" element={<StudentCreate />} />
+              <Route path="estudiantes/:studentId" element={<StudentDetail />} />
               <Route path="contabilidad" element={<Accounting />} />
             </Route>
 

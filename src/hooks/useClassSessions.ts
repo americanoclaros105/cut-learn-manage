@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import type { AttendanceUpsertRow } from '@/lib/roster';
 import { groupErrorMessage } from '@/lib/groups';
 import type { AttendanceStatus, SessionStatus } from '@/types';
-import { operationsKeys } from './operationsQueries';
+import { invalidateSessions, operationsKeys } from './operationsQueries';
 
 export interface ClassSession {
   id: string;
@@ -98,7 +98,7 @@ export const useCreateSession = () => {
       if (error) throw error;
       return courseId;
     },
-    onSuccess: (courseId) => queryClient.invalidateQueries({ queryKey: operationsKeys.sessions(courseId) }),
+    onSuccess: (courseId) => invalidateSessions(queryClient, courseId),
   });
 };
 
@@ -111,9 +111,7 @@ export const useSaveAttendance = () => {
       const { error } = await supabase.from('attendance').upsert(rows, { onConflict: 'session_id,user_id' });
       if (error) throw error;
     },
-    onSuccess: (_r, { courseId }) => {
-      queryClient.invalidateQueries({ queryKey: operationsKeys.sessions(courseId) });
-    },
+    onSuccess: (_r, { courseId }) => invalidateSessions(queryClient, courseId),
   });
 };
 
@@ -141,6 +139,6 @@ export const useSetSessionCancelled = () => {
         .eq('id', sessionId);
       if (error) throw new Error(groupErrorMessage(error));
     },
-    onSuccess: (_r, { courseId }) => queryClient.invalidateQueries({ queryKey: operationsKeys.sessions(courseId) }),
+    onSuccess: (_r, { courseId }) => invalidateSessions(queryClient, courseId),
   });
 };

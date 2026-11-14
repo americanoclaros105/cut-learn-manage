@@ -10,29 +10,34 @@ import {
   statusSuccessMessage,
   type StatusAction,
 } from '@/components/admin/operations/enrollmentStatusActions';
-import { EnrollmentCard, type EnrollmentAction } from '@/components/admin/students/detail/EnrollmentCard';
+import { EnrollmentCard, type EnrollmentAction, type EnrollmentGroupInfo } from '@/components/admin/students/detail/EnrollmentCard';
 import { EnrollmentDatesDialog } from '@/components/admin/students/detail/EnrollmentDatesDialog';
 import { useUpdateEnrollment } from '@/hooks/useEnrollments';
 import type { StudentEnrollmentRow } from '@/lib/studentDetail';
+import { ChangeGroupDialog } from './ChangeGroupDialog';
 
 interface SummaryTabProps {
   studentName: string;
   rows: StudentEnrollmentRow[];
+  /** Groups of the student's courses by id. */
+  groupsById: Map<string, EnrollmentGroupInfo>;
   onPay: (enrollmentId: string) => void;
   onEnroll: () => void;
 }
 
 /** Enrollment cards and the dialogs behind their actions (price, dates, status). */
-export const SummaryTab = ({ studentName, rows, onPay, onEnroll }: SummaryTabProps) => {
+export const SummaryTab = ({ studentName, rows, groupsById, onPay, onEnroll }: SummaryTabProps) => {
   const updateEnrollment = useUpdateEnrollment();
   const [priceRow, setPriceRow] = useState<StudentEnrollmentRow | null>(null);
   const [datesRow, setDatesRow] = useState<StudentEnrollmentRow | null>(null);
+  const [groupRow, setGroupRow] = useState<StudentEnrollmentRow | null>(null);
   const [statusAction, setStatusAction] = useState<{ action: StatusAction; row: StudentEnrollmentRow } | null>(null);
 
   const handleAction = (action: EnrollmentAction, row: StudentEnrollmentRow) => {
     if (action === 'pay') onPay(row.enrollment.id);
     else if (action === 'price') setPriceRow(row);
     else if (action === 'dates') setDatesRow(row);
+    else if (action === 'group') setGroupRow(row);
     else setStatusAction({ action, row });
   };
 
@@ -76,7 +81,12 @@ export const SummaryTab = ({ studentName, rows, onPay, onEnroll }: SummaryTabPro
             </Button>
           </div>
           {ordered.map((row) => (
-            <EnrollmentCard key={row.enrollment.id} row={row} onAction={handleAction} />
+            <EnrollmentCard
+              key={row.enrollment.id}
+              row={row}
+              group={groupsById.get(row.enrollment.group_id ?? '') ?? null}
+              onAction={handleAction}
+            />
           ))}
         </>
       )}
@@ -127,6 +137,13 @@ export const SummaryTab = ({ studentName, rows, onPay, onEnroll }: SummaryTabPro
             toast.error('No se pudieron actualizar las fechas');
           }
         }}
+      />
+
+      <ChangeGroupDialog
+        studentName={studentName}
+        row={groupRow}
+        currentGroupName={groupRow ? (groupsById.get(groupRow.enrollment.group_id ?? '')?.name ?? null) : null}
+        onClose={() => setGroupRow(null)}
       />
 
       <ConfirmDialog

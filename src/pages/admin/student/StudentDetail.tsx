@@ -13,11 +13,13 @@ import { StudentKpiCards } from '@/components/admin/students/detail/StudentKpiCa
 import { StudentPaymentsPanel } from '@/components/admin/students/detail/StudentPaymentsPanel';
 import { StudentSidePanel } from '@/components/admin/students/detail/StudentSidePanel';
 import { useCoursesWithStats } from '@/hooks/useCourses';
+import { useGroupsForCourses } from '@/hooks/useCourseGroups';
 import { useEnrollStudent } from '@/hooks/useEnrollments';
 import { useStudentAttendance, useStudentLessonProgress, useStudentPayments } from '@/hooks/useStudentDetail';
 import { useStudent } from '@/hooks/useStudents';
 import { useUnsavedChangesGuard } from '@/hooks/useUnsavedChangesGuard';
 import { buildLedgerCsv } from '@/lib/accounting';
+import { knownGroupError } from '@/lib/groups';
 import { downloadTextFile } from '@/lib/download';
 import {
   buildStudentEnrollments,
@@ -64,10 +66,10 @@ export const StudentDetail = () => {
   const enrollStudent = useEnrollStudent();
 
   const enrollments = useMemo(() => student.data?.assigned_courses ?? [], [student.data]);
-  const attendance = useStudentAttendance(
-    studentId,
-    useMemo(() => enrollments.map((e) => e.course_id), [enrollments]),
-  );
+  const courseIds = useMemo(() => enrollments.map((e) => e.course_id), [enrollments]);
+  const attendance = useStudentAttendance(studentId, courseIds);
+  const groups = useGroupsForCourses(courseIds);
+  const groupsById = useMemo(() => new Map((groups.data ?? []).map((g) => [g.id, g])), [groups.data]);
 
   const [personalDirty, setPersonalDirty] = useState(false);
   const [accessDirty, setAccessDirty] = useState(false);
@@ -182,6 +184,7 @@ export const StudentDetail = () => {
                 <SummaryTab
                   studentName={profile.name}
                   rows={rows}
+                  groupsById={groupsById}
                   onPay={(enrollmentId) => setPayRequest({ enrollmentId })}
                   onEnroll={() => setEnrollOpen(true)}
                 />
@@ -213,6 +216,7 @@ export const StudentDetail = () => {
               <TabsContent value="asistencia" className="mt-0">
                 <StudentAttendancePanel
                   rows={rows.filter((r) => r.enrollment.status !== 'cancelled')}
+                  groupsById={groupsById}
                   loading={attendance.isLoading}
                   error={attendance.isError}
                 />
@@ -255,7 +259,7 @@ export const StudentDetail = () => {
             setTab('resumen');
           } catch (e) {
             console.error(e);
-            toast.error('No se pudo inscribir al estudiante');
+            toast.error(knownGroupError(e) ?? 'No se pudo inscribir al estudiante');
           }
         }}
       />

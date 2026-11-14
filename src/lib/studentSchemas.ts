@@ -34,6 +34,11 @@ export const newEnrollmentSchema = z.object({
   course_id: z.string().min(1, 'Elige un curso'),
   agreed_price: z.number().min(0, 'El valor no puede ser negativo'),
   initial_payment: z.number().min(0, 'El abono no puede ser negativo'),
+  /** Optional group of the course ('' = Sin grupo). */
+  group_id: z.string().default(''),
+  /** Optional access window of this enrollment, 'YYYY-MM-DD' ('' = unset). */
+  enabled_from: z.string().default(''),
+  expires_at: z.string().default(''),
 });
 
 export const createStudentSchema = z
@@ -62,6 +67,13 @@ export const createStudentSchema = z
         ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['enrollments', i, 'course_id'], message: 'Este curso ya está en la lista' });
       }
       seen.add(e.course_id);
+      if (e.enabled_from && e.expires_at && e.expires_at < e.enabled_from) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['enrollments', i, 'expires_at'],
+          message: 'La fecha final no puede ser anterior a la inicial',
+        });
+      }
       if (e.initial_payment > e.agreed_price) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,

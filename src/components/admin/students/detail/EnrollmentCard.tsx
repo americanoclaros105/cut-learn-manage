@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { BookOpen, CreditCard, MoreVertical, Users } from 'lucide-react';
+import { GroupDot } from '@/components/admin/groups/GroupDot';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -16,10 +17,20 @@ import { effectiveAccess, formatCOP } from '@/lib/operations';
 import type { StudentEnrollmentRow } from '@/lib/studentDetail';
 import { formatDate, formatPercent } from './format';
 
-export type EnrollmentAction = 'pay' | 'price' | 'dates' | 'authorize' | 'suspend' | 'reactivate' | 'cancel';
+export type EnrollmentAction = 'pay' | 'price' | 'dates' | 'group' | 'authorize' | 'suspend' | 'reactivate' | 'cancel';
+
+/** The group an enrollment belongs to, as the card needs it. */
+export interface EnrollmentGroupInfo {
+  id: string;
+  course_id: string;
+  name: string;
+  color: string | null;
+}
 
 interface EnrollmentCardProps {
   row: StudentEnrollmentRow;
+  /** Null/absent = "Sin grupo". */
+  group?: EnrollmentGroupInfo | null;
   onAction: (action: EnrollmentAction, row: StudentEnrollmentRow) => void;
 }
 
@@ -33,7 +44,7 @@ const Stat = ({ label, value, tone }: { label: string; value: string; tone?: str
 );
 
 /** One enrollment: money, access window, lesson progress, attendance and its actions. */
-export const EnrollmentCard = ({ row, onAction }: EnrollmentCardProps) => {
+export const EnrollmentCard = ({ row, group, onAction }: EnrollmentCardProps) => {
   const { enrollment, course } = row;
   const cancelled = enrollment.status === 'cancelled';
   const access = effectiveAccess(enrollment);
@@ -67,6 +78,21 @@ export const EnrollmentCard = ({ row, onAction }: EnrollmentCardProps) => {
                 <Badge variant="outline">Autorizado manualmente</Badge>
               )}
             </div>
+            <p className="mt-1 flex items-center gap-1.5 text-sm text-muted-foreground">
+              {group ? (
+                <>
+                  <GroupDot color={group.color} />
+                  <Link
+                    to={`/admin/cursos/${group.course_id}/grupos/${group.id}`}
+                    className="font-medium text-foreground underline-offset-2 hover:underline"
+                  >
+                    {group.name}
+                  </Link>
+                </>
+              ) : (
+                'Sin grupo'
+              )}
+            </p>
           </div>
           <div className="flex shrink-0 items-center gap-1">
             {!cancelled && owed > 0 && (
@@ -86,6 +112,9 @@ export const EnrollmentCard = ({ row, onAction }: EnrollmentCardProps) => {
                     <DropdownMenuItem onClick={() => onAction('pay', row)}>Registrar pago</DropdownMenuItem>
                     <DropdownMenuItem onClick={() => onAction('price', row)}>Editar valor acordado</DropdownMenuItem>
                     <DropdownMenuItem onClick={() => onAction('dates', row)}>Editar fechas de acceso</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => onAction('group', row)}>
+                      {group ? 'Cambiar de grupo' : 'Asignar a un grupo'}
+                    </DropdownMenuItem>
                     <DropdownMenuSeparator />
                   </>
                 )}

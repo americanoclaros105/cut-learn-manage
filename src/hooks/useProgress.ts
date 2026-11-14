@@ -90,6 +90,7 @@ export interface MyEnrollment {
   enabled_from: string | null;
   expires_at: string | null;
   agreed_price: number;
+  group_id: string | null;
   paid: number;
   balance: number;
   access: EffectiveAccess;
@@ -106,7 +107,7 @@ export const useMyEnrollments = () => {
 
       const { data: enrollments, error } = await supabase
         .from('user_course_assignments')
-        .select('id, course_id, status, enabled_from, expires_at, agreed_price')
+        .select('id, course_id, status, enabled_from, expires_at, agreed_price, group_id')
         .eq('user_id', user.id);
       if (error) throw error;
 

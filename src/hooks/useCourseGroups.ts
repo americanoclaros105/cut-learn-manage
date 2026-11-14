@@ -32,9 +32,10 @@ const toGroups = (
     };
   });
 
-const loadGroups = async (filter: { courseId?: string; groupId?: string }): Promise<CourseGroupWithStats[]> => {
+const loadGroups = async (filter: { courseId?: string; courseIds?: string[]; groupId?: string }): Promise<CourseGroupWithStats[]> => {
   let groupsQuery = supabase.from('course_groups').select(GROUP_SELECT).order('start_date', { ascending: false });
   if (filter.courseId) groupsQuery = groupsQuery.eq('course_id', filter.courseId);
+  if (filter.courseIds) groupsQuery = groupsQuery.in('course_id', filter.courseIds);
   if (filter.groupId) groupsQuery = groupsQuery.eq('id', filter.groupId);
   const { data: groups, error } = await groupsQuery;
   check(error);
@@ -56,6 +57,14 @@ export const useCourseGroups = (courseId: string) =>
     queryKey: operationsKeys.groups(courseId),
     enabled: !!courseId,
     queryFn: () => loadGroups({ courseId }),
+  });
+
+/** Groups of several courses at once (e.g. the courses a student is enrolled in); empty list skips the request. */
+export const useGroupsForCourses = (courseIds: string[]) =>
+  useQuery({
+    queryKey: [...operationsKeys.groups('many'), [...courseIds].sort().join(',')],
+    enabled: courseIds.length > 0,
+    queryFn: () => loadGroups({ courseIds }),
   });
 
 /** One group with its schedule and occupancy; resolves to null when it does not exist. */

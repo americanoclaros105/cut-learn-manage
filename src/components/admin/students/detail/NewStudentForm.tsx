@@ -7,12 +7,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import { CourseGroupPicker } from '@/components/admin/groups/CourseGroupPicker';
 import { MoneyInput } from '@/components/admin/operations/MoneyInput';
+import { enrollmentDefaults } from '@/lib/groupPicker';
 import { formatMoneyInput } from '@/lib/money';
 import { formatCOP, paymentMethodLabels } from '@/lib/operations';
 import { defaultAccessDates } from '@/lib/studentDetail';
 import { createStudentSchema, type CreateStudentValues } from '@/lib/studentSchemas';
-import type { PaymentMethod } from '@/types';
+import type { CourseGroupWithStats, PaymentMethod } from '@/types';
 import { accountStatusHelp } from './accountStatusHelp';
 import type { EnrollableCourse } from './AddEnrollmentDialog';
 import { Field } from './Field';
@@ -64,6 +66,16 @@ export const NewStudentForm = ({ courses, saving, onSubmit, onCancel, onDirtyCha
   const picked = watch('enrollments');
   const hasInitialPayment = picked.some((e) => e.initial_payment > 0);
   const allPicked = picked.length >= courses.length;
+
+  // Picking a group prefills the agreed price and the access window (still editable); none restores the course price.
+  const pickGroup = (index: number, courseId: string, group: CourseGroupWithStats | null) => {
+    const defaults = enrollmentDefaults(group, courses.find((c) => c.id === courseId)?.price ?? 0);
+    const opts = { shouldDirty: true };
+    setValue(`enrollments.${index}.group_id`, group?.id ?? '', opts);
+    setValue(`enrollments.${index}.agreed_price`, defaults.agreedPrice, opts);
+    setValue(`enrollments.${index}.enabled_from`, defaults.enabledFrom ?? '', opts);
+    setValue(`enrollments.${index}.expires_at`, defaults.expiresAt ?? '', opts);
+  };
 
   const submit = handleSubmit(async (values) => {
     try {
@@ -195,8 +207,8 @@ export const NewStudentForm = ({ courses, saving, onSubmit, onCancel, onDirtyCha
                           value={field.value}
                           onValueChange={(id) => {
                             field.onChange(id);
-                            const price = courses.find((c) => c.id === id)?.price ?? 0;
-                            setValue(`enrollments.${index}.agreed_price`, price, { shouldDirty: true });
+                            // The groups belong to the course: reset the group (and its prefilled dates) too.
+                            pickGroup(index, id, null);
                           }}
                         >
                           <SelectTrigger id={`new-course-${index}`} aria-invalid={rowErrors?.course_id ? true : undefined}>
@@ -226,6 +238,18 @@ export const NewStudentForm = ({ courses, saving, onSubmit, onCancel, onDirtyCha
                     <Trash2 className="h-4 w-4" />
                   </Button>
                 </div>
+                {picked[index]?.course_id && (
+                  <div className="space-y-2">
+                    <p className="text-sm font-medium">Grupo</p>
+                    <CourseGroupPicker
+                      idPrefix={`new-group-${index}`}
+                      courseId={picked[index].course_id}
+                      coursePrice={courses.find((c) => c.id === picked[index].course_id)?.price ?? 0}
+                      value={picked[index]?.group_id ?? ''}
+                      onChange={(group) => pickGroup(index, picked[index].course_id, group)}
+                    />
+                  </div>
+                )}
                 <div className="grid gap-3 sm:grid-cols-2">
                   <Field id={`new-price-${index}`} label="Valor acordado (COP)" error={rowErrors?.agreed_price?.message}>
                     <Controller
@@ -261,6 +285,22 @@ export const NewStudentForm = ({ courses, saving, onSubmit, onCancel, onDirtyCha
                     />
                   </Field>
                 </div>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <Field id={`new-enroll-from-${index}`} label="Acceso desde (opcional)" error={rowErrors?.enabled_from?.message}>
+                    <Input
+                      {...fieldProps(`new-enroll-from-${index}`, rowErrors?.enabled_from?.message)}
+                      type="date"
+                      {...register(`enrollments.${index}.enabled_from`)}
+                    />
+                  </Field>
+                  <Field id={`new-enroll-until-${index}`} label="Acceso hasta (opcional)" error={rowErrors?.expires_at?.message}>
+                    <Input
+                      {...fieldProps(`new-enroll-until-${index}`, rowErrors?.expires_at?.message)}
+                      type="date"
+                      {...register(`enrollments.${index}.expires_at`)}
+                    />
+                  </Field>
+                </div>
               </fieldset>
             );
           })}
@@ -269,7 +309,7 @@ export const NewStudentForm = ({ courses, saving, onSubmit, onCancel, onDirtyCha
             type="button"
             variant="outline"
             disabled={courses.length === 0 || allPicked}
-            onClick={() => append({ course_id: '', agreed_price: 0, initial_payment: 0 })}
+            onClick={() => append({ course_id: '', agreed_price: 0, initial_payment: 0, group_id: '', enabled_from: '', expires_at: '' })}
           >
             <Plus className="mr-2 h-4 w-4" aria-hidden /> Agregar curso
           </Button>

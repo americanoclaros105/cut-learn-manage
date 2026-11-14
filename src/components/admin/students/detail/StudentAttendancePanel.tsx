@@ -2,21 +2,34 @@ import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { CalendarX } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { GroupDot } from '@/components/admin/groups/GroupDot';
 import { Skeleton } from '@/components/ui/skeleton';
 import { attendanceOrder, attendanceStyles } from '@/components/admin/operations/attendanceStyles';
 import { attendanceStatusLabels } from '@/lib/operations';
 import type { StudentEnrollmentRow } from '@/lib/studentDetail';
 import { cn } from '@/lib/utils';
+import type { EnrollmentGroupInfo } from './EnrollmentCard';
 import { formatPercent } from './format';
 
 interface StudentAttendancePanelProps {
   rows: StudentEnrollmentRow[];
+  /** Groups of the student's courses by id, to name the group of each course. */
+  groupsById: Map<string, EnrollmentGroupInfo>;
   loading: boolean;
   error: boolean;
 }
 
+const GroupLabel = ({ group }: { group?: EnrollmentGroupInfo }) =>
+  group ? (
+    <>
+      <GroupDot color={group.color} /> {group.name}
+    </>
+  ) : (
+    <>Sin grupo</>
+  );
+
 /** Per course: this student's status in every session plus their attendance rate. */
-export const StudentAttendancePanel = ({ rows, loading, error }: StudentAttendancePanelProps) => {
+export const StudentAttendancePanel = ({ rows, groupsById, loading, error }: StudentAttendancePanelProps) => {
   if (loading) {
     return (
       <div className="space-y-3">
@@ -47,7 +60,12 @@ export const StudentAttendancePanel = ({ rows, loading, error }: StudentAttendan
       {rows.map((row) => (
         <Card key={row.enrollment.id}>
           <CardHeader className="flex-row flex-wrap items-center justify-between gap-2 space-y-0">
-            <CardTitle className="text-base">{row.course?.title ?? 'Curso no disponible'}</CardTitle>
+            <div className="min-w-0">
+              <CardTitle className="text-base">{row.course?.title ?? 'Curso no disponible'}</CardTitle>
+              <p className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground">
+                <GroupLabel group={groupsById.get(row.enrollment.group_id ?? '')} />
+              </p>
+            </div>
             <div className="flex flex-wrap items-center gap-2 text-xs">
               <span className="font-medium">{row.attendance.total === 0 ? 'Sin registros' : `Asistencia ${formatPercent(row.attendance.rate)}`}</span>
               {attendanceOrder.map((status) => (

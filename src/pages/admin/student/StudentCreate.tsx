@@ -7,10 +7,12 @@ import { Button } from '@/components/ui/button';
 import type { EnrollableCourse } from '@/components/admin/students/detail/AddEnrollmentDialog';
 import { NewStudentForm } from '@/components/admin/students/detail/NewStudentForm';
 import { useCourses } from '@/hooks/useCourses';
+import { useTransferEnrollmentGroup } from '@/hooks/useCourseGroups';
 import { fetchEnrollmentIdsByCourse } from '@/hooks/useEnrollments';
 import { useCreatePayment } from '@/hooks/usePayments';
 import { useCreateStudent } from '@/hooks/useStudents';
 import { useUnsavedChangesGuard } from '@/hooks/useUnsavedChangesGuard';
+import { knownGroupError } from '@/lib/groups';
 import { dayToIso, type CreateStudentValues } from '@/lib/studentSchemas';
 
 /** Create-student page: creates the account (edge function), then the optional initial payments. */
@@ -19,6 +21,7 @@ export const StudentCreate = () => {
   const courses = useCourses({ status: 'published' });
   const createStudent = useCreateStudent();
   const createPayment = useCreatePayment();
+  const transferGroup = useTransferEnrollmentGroup();
   const [dirty, setDirty] = useState(false);
   // After a successful creation we navigate away on purpose: skip the unsaved-changes prompt.
   const created = useRef(false);
@@ -45,7 +48,12 @@ export const StudentCreate = () => {
         enabled_from: dayToIso(values.enabled_from, 'start'),
         expires_at: dayToIso(values.expires_at, 'end'),
         notes: values.notes || undefined,
-        courses: values.enrollments.map((e) => ({ course_id: e.course_id, agreed_price: e.agreed_price })),
+        courses: values.enrollments.map((e) => ({
+          course_id: e.course_id,
+          agreed_price: e.agreed_price,
+          enabled_from: e.enabled_from ? dayToIso(e.enabled_from, 'start') : undefined,
+          expires_at: e.expires_at ? dayToIso(e.expires_at, 'end') : undefined,
+        })),
       });
       userId = response.user_id as string;
     } catch (e) {
@@ -55,6 +63,29 @@ export const StudentCreate = () => {
     }
 
     created.current = true;
+
+    // The create-student function does not take groups: assign them right after, so a full group
+    // only leaves that enrollment without group instead of failing the whole creation.
+    const withGroup = values.enrollments.filter((e) => e.group_id);
+    const groupFailures: string[] = [];
+    if (withGroup.length > 0) {
+      try {
+        const ids = await fetchEnrollmentIdsByCourse(userId);
+        for (const e of withGroup) {
+          const enrollmentId = ids[e.course_id];
+          try {
+            if (!enrollmentId) throw new Error('missing enrollment');
+            await transferGroup.mutateAsync({ enrollmentId, courseId: e.course_id, groupId: e.group_id });
+          } catch (error) {
+            console.error(error);
+            groupFailures.push(knownGroupError(error) ?? 'No se pudo asignar el grupo.');
+          }
+        }
+      } catch (error) {
+        console.error(error);
+        groupFailures.push('No se pudieron asignar los grupos.');
+      }
+    }
 
     const withPayment = values.enrollments.filter((e) => e.initial_payment > 0);
     let paymentFailures = 0;
@@ -87,9 +118,12 @@ export const StudentCreate = () => {
       }
     }
 
+    if (groupFailures.length > 0) {
+      toast.warning(`Estudiante creado, pero quedó sin grupo en algún curso: ${groupFailures[0]} Asígnalo desde su perfil.`);
+    }
     if (paymentFailures > 0) {
       toast.warning('Estudiante creado, pero no se pudieron registrar algunos abonos. Regístralos desde la pestaña Pagos.');
-    } else {
+    } else if (groupFailures.length === 0) {
       toast.success('Estudiante creado correctamente');
     }
     navigate(`/admin/estudiantes/${userId}?tab=resumen`);
@@ -107,7 +141,7 @@ export const StudentCreate = () => {
 
       <NewStudentForm
         courses={available}
-        saving={createStudent.isPending || createPayment.isPending}
+        saving={createStudent.isPending || createPayment.isPending || transferGroup.isPending}
         onSubmit={handleSubmit}
         onCancel={goBack}
         onDirtyChange={setDirty}

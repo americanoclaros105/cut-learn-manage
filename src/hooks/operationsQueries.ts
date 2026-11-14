@@ -11,6 +11,13 @@ export const operationsKeys = {
   group: (groupId: string) => ['group', groupId] as const,
 };
 
+/** Class sessions changed: course views and the cross-course agenda both refresh. */
+export const invalidateSessions = (queryClient: QueryClient, courseId?: string | null) => {
+  if (courseId) queryClient.invalidateQueries({ queryKey: operationsKeys.sessions(courseId) });
+  else queryClient.invalidateQueries({ queryKey: ['class-sessions'] });
+  queryClient.invalidateQueries({ queryKey: ['agenda'] });
+};
+
 /**
  * Enrollment state and payments are linked by DB triggers, so after any
  * enrollment or payment change everything that shows money or access refreshes.
@@ -32,8 +39,8 @@ export const invalidateOperations = (queryClient: QueryClient, courseId?: string
 export const invalidateGroups = (queryClient: QueryClient, courseId?: string | null) => {
   if (courseId) queryClient.invalidateQueries({ queryKey: operationsKeys.groups(courseId) });
   else queryClient.invalidateQueries({ queryKey: ['groups'] });
+  queryClient.invalidateQueries({ queryKey: operationsKeys.groups('many') });
   queryClient.invalidateQueries({ queryKey: ['group'] });
-  if (courseId) queryClient.invalidateQueries({ queryKey: operationsKeys.sessions(courseId) });
-  else queryClient.invalidateQueries({ queryKey: ['class-sessions'] });
+  invalidateSessions(queryClient, courseId);
   invalidateOperations(queryClient, courseId);
 };

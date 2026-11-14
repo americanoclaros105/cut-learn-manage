@@ -40,6 +40,7 @@ export interface CourseAssignment {
   status: EnrollmentStatus;
   agreed_price: number;
   activated_by: string | null;
+  group_id?: string | null;
   /** Sum of non-voided payments (admin views only). */
   paid_total?: number;
   /** Number of payments (voided included) linked to this enrollment. */

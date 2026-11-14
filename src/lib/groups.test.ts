@@ -8,6 +8,7 @@ import {
   groupPhase,
   groupPhaseLabels,
   isGroupFull,
+  knownGroupError,
   seatsLeft,
   weekdayLabels,
   weekdayShortLabels,
@@ -174,5 +175,16 @@ describe('groupErrorMessage', () => {
   it('falls back to the original message, then to a generic one', () => {
     expect(groupErrorMessage(new Error('boom'))).toBe('boom');
     expect(groupErrorMessage(null)).toBe('No se pudo completar la operación.');
+  });
+});
+
+describe('knownGroupError', () => {
+  it('returns the friendly message for known group errors', () => {
+    expect(knownGroupError({ message: 'El grupo está lleno' })).toBe('El grupo está lleno: no quedan cupos disponibles.');
+  });
+
+  it('returns null for anything else so callers can show their own message', () => {
+    expect(knownGroupError(new Error('boom'))).toBeNull();
+    expect(knownGroupError(null)).toBeNull();
   });
 });

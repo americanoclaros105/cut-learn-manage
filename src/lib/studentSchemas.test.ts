@@ -85,6 +85,19 @@ describe('createStudentSchema', () => {
     expect(issuePaths(createStudentSchema.safeParse({ ...base, initial_method: 'bitcoin' }))).toContain('initial_method');
   });
 
+  it('defaults the optional group and access dates of an enrollment to empty', () => {
+    const parsed = createStudentSchema.parse(base);
+    expect(parsed.enrollments[0]).toMatchObject({ group_id: '', enabled_from: '', expires_at: '' });
+  });
+
+  it('rejects an enrollment access window that ends before it starts', () => {
+    const bad = createStudentSchema.safeParse({
+      ...base,
+      enrollments: [{ course_id: 'c1', agreed_price: 10, initial_payment: 0, enabled_from: '2026-12-10', expires_at: '2026-12-01' }],
+    });
+    expect(issuePaths(bad)).toContain('enrollments.0.expires_at');
+  });
+
   it('allows creating a student without enrollments', () => {
     expect(createStudentSchema.safeParse({ ...base, enrollments: [] }).success).toBe(true);
   });

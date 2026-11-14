@@ -5,10 +5,13 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { CourseGroupPicker } from '@/components/admin/groups/CourseGroupPicker';
 import { MoneyInput } from '@/components/admin/operations/MoneyInput';
+import { enrollmentDefaults } from '@/lib/groupPicker';
 import { formatMoneyInput } from '@/lib/money';
 import { formatCOP } from '@/lib/operations';
 import { dayToIso } from '@/lib/studentSchemas';
+import type { CourseGroupWithStats } from '@/types';
 
 export interface EnrollableCourse {
   id: string;
@@ -21,6 +24,8 @@ export interface AddEnrollmentValues {
   agreedPrice: number;
   enabledFrom: string | null;
   expiresAt: string | null;
+  /** Group of the course, null = Sin grupo. */
+  groupId: string | null;
 }
 
 interface AddEnrollmentDialogProps {
@@ -40,6 +45,7 @@ export const AddEnrollmentDialog = ({ open, onOpenChange, studentName, courses, 
   const [price, setPrice] = useState(0);
   const [from, setFrom] = useState('');
   const [until, setUntil] = useState('');
+  const [groupId, setGroupId] = useState('');
 
   useEffect(() => {
     if (!open) return;
@@ -48,6 +54,7 @@ export const AddEnrollmentDialog = ({ open, onOpenChange, studentName, courses, 
     setPrice(0);
     setFrom('');
     setUntil('');
+    setGroupId('');
   }, [open]);
 
   const pickCourse = (id: string) => {
@@ -56,13 +63,27 @@ export const AddEnrollmentDialog = ({ open, onOpenChange, studentName, courses, 
     const suggested = course?.price ?? 0;
     setPrice(suggested);
     setPriceText(suggested ? formatMoneyInput(suggested) : '');
+    // The groups belong to the course: drop the previous choice and its prefilled dates.
+    setGroupId('');
+    setFrom('');
+    setUntil('');
   };
 
+  const pickGroup = (group: CourseGroupWithStats | null) => {
+    setGroupId(group?.id ?? '');
+    const defaults = enrollmentDefaults(group, selectedCourse?.price ?? 0);
+    setPrice(defaults.agreedPrice);
+    setPriceText(defaults.agreedPrice ? formatMoneyInput(defaults.agreedPrice) : '');
+    setFrom(defaults.enabledFrom ?? '');
+    setUntil(defaults.expiresAt ?? '');
+  };
+
+  const selectedCourse = courses.find((c) => c.id === courseId);
   const invalid = !!from && !!until && until < from;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className="max-h-[90vh] overflow-y-auto">
         <form
           className="space-y-4"
           onSubmit={(e) => {
@@ -73,6 +94,7 @@ export const AddEnrollmentDialog = ({ open, onOpenChange, studentName, courses, 
               agreedPrice: price,
               enabledFrom: from ? dayToIso(from, 'start') : null,
               expiresAt: until ? dayToIso(until, 'end') : null,
+              groupId: groupId || null,
             });
           }}
         >
@@ -98,6 +120,23 @@ export const AddEnrollmentDialog = ({ open, onOpenChange, studentName, courses, 
               </SelectContent>
             </Select>
           </div>
+
+          {selectedCourse && (
+            <div className="space-y-2">
+              <Label>Grupo</Label>
+              <CourseGroupPicker
+                idPrefix="add-group"
+                courseId={selectedCourse.id}
+                coursePrice={selectedCourse.price}
+                value={groupId}
+                disabled={submitting}
+                onChange={pickGroup}
+              />
+              <p className="text-xs text-muted-foreground">
+                Al elegir un grupo se sugieren el valor y las fechas de acceso; puedes ajustarlos abajo.
+              </p>
+            </div>
+          )}
 
           <div className="space-y-2">
             <Label htmlFor="add-price">Valor acordado (COP)</Label>

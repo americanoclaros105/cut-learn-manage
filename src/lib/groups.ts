@@ -133,15 +133,19 @@ export const defaultAccessDates = (
   expiresAt: formatDay(parseDay(group.end_date) + ACCESS_GRACE_DAYS * DAY_MS),
 });
 
-/** Friendly Spanish message for the errors the group tables, triggers and RPCs can raise. */
-export const groupErrorMessage = (error: unknown): string => {
-  const raw =
-    typeof error === 'object' && error !== null && 'message' in error
-      ? String((error as { message: unknown }).message)
-      : '';
+const errorText = (error: unknown): string =>
+  typeof error === 'object' && error !== null && 'message' in error ? String((error as { message: unknown }).message) : '';
+
+/** Friendly Spanish message for an error the group tables, triggers and RPCs raise on purpose; null for any other. */
+export const knownGroupError = (error: unknown): string | null => {
+  const raw = errorText(error);
   if (raw.includes('El grupo está lleno')) return 'El grupo está lleno: no quedan cupos disponibles.';
   if (raw.includes('course_groups_course_name_key')) return 'Ya existe un grupo con ese nombre en este curso.';
   if (raw.includes('superponerse')) return 'Los horarios del mismo día no pueden superponerse.';
   if (raw.includes('no pertenece al curso')) return 'El grupo no pertenece al curso de la inscripción.';
-  return raw || 'No se pudo completar la operación.';
+  return null;
 };
+
+/** Friendly Spanish message for the errors the group tables, triggers and RPCs can raise. */
+export const groupErrorMessage = (error: unknown): string =>
+  knownGroupError(error) ?? (errorText(error) || 'No se pudo completar la operación.');

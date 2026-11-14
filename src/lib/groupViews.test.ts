@@ -16,6 +16,7 @@ import {
   todaySession,
   transferOptions,
   unassignedCount,
+  upcomingSessions,
 } from './groupViews';
 
 const group = (over: Partial<CourseGroupWithStats> & { id: string }): CourseGroupWithStats => ({
@@ -223,5 +224,29 @@ describe('finance helpers', () => {
       { id: 'p3', enrollment_id: null },
     ] as never[];
     expect(ledgerForEnrollments(payments, new Set(['e1'])).map((p: { id: string }) => p.id)).toEqual(['p1']);
+  });
+});
+
+describe('upcomingSessions', () => {
+  const now = new Date('2026-11-13T12:00:00Z');
+  const s = (id: string, starts_at: string, status: 'scheduled' | 'cancelled' = 'scheduled') => ({ id, starts_at, status });
+
+  it('returns the next sessions in order, cancelled ones included', () => {
+    const out = upcomingSessions(
+      [
+        s('past', '2026-11-10T18:00:00Z'),
+        s('c', '2026-11-20T18:00:00Z'),
+        s('a', '2026-11-14T18:00:00Z'),
+        s('b', '2026-11-17T18:00:00Z', 'cancelled'),
+        s('d', '2026-11-27T18:00:00Z'),
+      ],
+      now,
+      3,
+    );
+    expect(out.map((x) => x.id)).toEqual(['a', 'b', 'c']);
+  });
+
+  it('is empty when nothing is ahead', () => {
+    expect(upcomingSessions([s('past', '2026-11-10T18:00:00Z')], now, 3)).toEqual([]);
   });
 });

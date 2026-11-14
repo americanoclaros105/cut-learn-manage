@@ -2,7 +2,10 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCourseWithModules, Lesson } from '@/hooks/useCourses';
+import { useMyGroups } from '@/hooks/useMyGroups';
 import { useCourseProgress, useMarkLessonComplete, useMyEnrollments } from '@/hooks/useProgress';
+import { nextSession } from '@/lib/groupViews';
+import { classWhen } from '@/lib/studentGroups';
 import { accessBlockedMessage, formatCOP } from '@/lib/operations';
 import { ContactWhatsAppButton } from '@/components/student/ContactWhatsAppButton';
 import { Button } from '@/components/ui/button';
@@ -35,6 +38,9 @@ export const CourseViewer = () => {
   // Access requires an active enrollment within its dates (also enforced by RLS).
   const hasAccess = enrollment?.access === 'active';
   const blocked = enrollment ? accessBlockedMessage(enrollment.access, enrollment) : null;
+  const { data: myGroups = [] } = useMyGroups(enrollment?.group_id ? [enrollment.group_id] : []);
+  const myGroup = myGroups.find((g) => g.id === enrollment?.group_id);
+  const upcoming = myGroup ? nextSession(myGroup.sessions, new Date()) : null;
   const completedLessons = progressData.map((p) => p.lesson_id);
 
   // Apply course theme
@@ -241,6 +247,8 @@ export const CourseViewer = () => {
         onToggleSidebar={() => setIsMobileSidebarOpen(!isMobileSidebarOpen)}
         isCourseComplete={isCourseComplete}
         onShowCertificate={() => setShowCertificate(true)}
+        groupName={myGroup?.name}
+        nextClassText={upcoming ? `Próxima clase: ${classWhen(upcoming)}` : null}
       />
 
       {/* Main Layout with Content + Sidebar */}

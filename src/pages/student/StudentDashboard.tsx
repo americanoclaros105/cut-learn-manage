@@ -1,6 +1,8 @@
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCourses } from '@/hooks/useCourses';
+import { useMyGroups } from '@/hooks/useMyGroups';
+import { GroupScheduleBlock } from '@/components/student/GroupScheduleBlock';
 import { useMyEnrollments, useUserProgress } from '@/hooks/useProgress';
 import { accessBlockedMessage, formatCOP } from '@/lib/operations';
 import { ContactWhatsAppButton } from '@/components/student/ContactWhatsAppButton';
@@ -23,6 +25,16 @@ export const StudentDashboard = () => {
   const { data: allCourses = [], isLoading: loadingCourses } = useCourses({ status: 'published' });
   const { data: enrollments = [], isLoading: loadingAssigned } = useMyEnrollments();
   const { data: progressData = [], isLoading: loadingProgress } = useUserProgress();
+  const groupIds = enrollments.map((e) => e.group_id).filter((id): id is string => !!id);
+  const { data: groups = [] } = useMyGroups(groupIds);
+  const now = new Date();
+
+  /** Group card of the course, when the enrollment has a group the student can read. */
+  const groupBlock = (courseId: string) => {
+    const enrollment = enrollmentFor(courseId);
+    const group = groups.find((g) => g.id === enrollment?.group_id);
+    return enrollment && group ? <GroupScheduleBlock group={group} access={enrollment.access} now={now} /> : null;
+  };
 
   const getCourseProgress = (courseId: string) => {
     const courseProgress = progressData.filter(p => p.course_id === courseId);
@@ -108,6 +120,7 @@ export const StudentDashboard = () => {
                         </span>
                       )}
                     </div>
+                    {groupBlock(course.id)}
                     <div className="space-y-2 mb-4">
                       <div className="flex justify-between text-sm">
                         <span className="text-muted-foreground">Progreso</span>
@@ -151,6 +164,7 @@ export const StudentDashboard = () => {
                     <Badge variant="outline">{message.title}</Badge>
                     <h3 className="font-semibold text-lg line-clamp-2">{course.title}</h3>
                     <p className="text-sm text-muted-foreground">{message.detail}</p>
+                    {groupBlock(course.id)}
                     {enrollment.access === 'pending' && enrollment.agreed_price > 0 && (
                       <div className="text-sm space-y-1">
                         <div className="flex justify-between">

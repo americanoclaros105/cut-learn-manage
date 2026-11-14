@@ -122,6 +122,15 @@ export const nextSession = <S extends SessionLike>(sessions: S[], now: Date): S 
   return [...sessions].sort(byStart).find((s) => s.status === 'scheduled' && new Date(s.starts_at).getTime() >= t) ?? null;
 };
 
+/** The next `limit` classes that have not started yet (cancelled ones included, so students see them). */
+export const upcomingSessions = <S extends SessionLike>(sessions: S[], now: Date, limit: number): S[] => {
+  const t = now.getTime();
+  return [...sessions]
+    .filter((s) => new Date(s.starts_at).getTime() >= t)
+    .sort(byStart)
+    .slice(0, limit);
+};
+
 export const sessionsByDay = <S extends SessionLike>(sessions: S[]): Map<string, S[]> => {
   const map = new Map<string, S[]>();
   for (const s of [...sessions].sort(byStart)) {

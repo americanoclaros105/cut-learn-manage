@@ -56,7 +56,7 @@ published modules/lessons).
       groups, capacity guard; RLS; SQL tests; pure schedule/status logic with Vitest.
 - [x] T7b Groups admin UI: course → groups list, group detail (students, calendar + attendance, finances),
       roster/attendance scoped by group, "Generar calendario", transfer student.
-- [ ] T7c Groups everywhere else: group picker in student page/enrollment dialogs and create page,
+- [x] T7c Groups everywhere else: group picker in student page/enrollment dialogs and create page,
       weekly agenda `/admin/agenda` across all groups, student side shows group, schedule and next classes.
 
 Group decisions (user gave freedom, 2026-11-13): a student is in at most one group per course
@@ -155,6 +155,24 @@ group dates prefill enrollment access dates; existing enrollments/sessions stay 
   touched/new files except pre-existing errors in untouched lines of `CourseEditor.tsx`. Not exercised in a browser (groups
   migration not applied anywhere yet).
 
+- T7c: route delegated writer (2+ non-trivial files). Commits `8644e46` (group picker in enrollment flows), `eb3a01c` +
+  `d47c744` (agenda + dashboard cards), `28bf479` (student side). Strict TDD: RED (missing modules / undefined exports)
+  then GREEN for `src/lib/groupPicker.ts` (options, price/dates defaults), `src/lib/agenda.ts` (week/day/list ranges,
+  block positioning, overlap columns, filters, now line, `formatClock`, `sessionHref`), `src/lib/studentGroups.ts`,
+  `upcomingSessions` in `groupViews`, `knownGroupError` in `groups`, and the group/access-date fields of
+  `createStudentSchema`; 225 tests. UI: `GroupPicker` (presentational) + `CourseGroupPicker` (container) used by
+  `AddEnrollmentDialog` and `NewStudentForm`; `EnrollmentCard` shows the group (link) and "Cambiar de grupo" via
+  `ChangeGroupDialog` (reuses `TransferGroupDialog` + `transfer_enrollment_group`); attendance tab names the group.
+  `/admin/agenda` (`pages/admin/Agenda.tsx`, `components/admin/agenda/`, hook `useAgendaSessions` with client-side
+  filters, today strip, week grid desktop / stacked list mobile); dashboard cards "Clases de hoy" and "Proximos grupos
+  por iniciar". Student: `useMyGroups` (groups/schedules/sessions/own attendance; each part degrades to empty under
+  RLS), `GroupScheduleBlock` in `StudentDashboard` cards, group + next class chip in `CoursePlayerHeader`.
+  Notes: the `create-student` edge function does not take `group_id`, so the create page assigns groups right after with
+  `transfer_enrollment_group` (a full group leaves that enrollment without group and warns, no redeploy needed); changing
+  a group only supports moving to another group (clearing to "Sin grupo" is not offered). Not exercised in a browser.
+  Checks: `npm test` 225 passed; `npm run build` OK; `npx tsc --noEmit -p tsconfig.app.json` clean; eslint clean on all
+  new/touched files except pre-existing errors in untouched lines of `CourseViewer.tsx` (any types).
+
 ## Review findings (native review of T1+T2, fixed in `fix(db): harden enrollment access automation after review`)
 Route: delegated writer (2+ non-trivial files). Migration edited in place (never applied anywhere yet).
 1. Payment activation relabelled manual: `recompute_enrollment_access` sets the transaction-local flag
@@ -177,4 +195,4 @@ Route: delegated writer (2+ non-trivial files). Migration edited in place (never
    careful reading; NOT executed (no DB access from the writer).
 
 ## Next step
-T7c (groups everywhere else). T5: browser walkthrough once migrations are applied.
+T5: browser walkthrough (groups, agenda, student side) now that the migrations are applied.

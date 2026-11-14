@@ -54,7 +54,7 @@ published modules/lessons).
       start/end time, multiple per group), `user_course_assignments.group_id`, `class_sessions.group_id` +
       status (scheduled/cancelled), RPCs to generate sessions from the schedule, transfer a student between
       groups, capacity guard; RLS; SQL tests; pure schedule/status logic with Vitest.
-- [ ] T7b Groups admin UI: course → groups list, group detail (students, calendar + attendance, finances),
+- [x] T7b Groups admin UI: course → groups list, group detail (students, calendar + attendance, finances),
       roster/attendance scoped by group, "Generar calendario", transfer student.
 - [ ] T7c Groups everywhere else: group picker in student page/enrollment dialogs and create page,
       weekly agenda `/admin/agenda` across all groups, student side shows group, schedule and next classes.
@@ -138,6 +138,23 @@ group dates prefill enrollment access dates; existing enrollments/sessions stay 
   `4_grupos_aplicar.sql`. The SQL was written by careful reading and NOT executed: run the dry run before applying.
   Checks: `npm test` 119 passed; `npm run build` OK; `npx tsc --noEmit -p tsconfig.app.json` clean; eslint clean on touched files.
 
+- T7b: route delegated writer (2+ non-trivial files). Commits `b5d4f40` (pure helpers, strict TDD: RED "Failed to load url
+  ./groupViews" / "Cannot find module ./groupForm", then GREEN; later RED for `filterByGroup`, bulk `transferOptions` and
+  `monthsBetween`) and `ce39329` (UI). New pure modules `src/lib/groupForm.ts` (next group name/color, schedule builder
+  rows + validation + overlap, rows<->slots, live preview text, month grid) and `src/lib/groupViews.ts` (sort/filter groups,
+  occupancy, rows by group, today/next session, session summary, transfer options, balances, reminders, ledger filter);
+  175 tests. Routes: `/admin/cursos/:courseId/grupos` (hub, canonical; `/grupo` redirects), `.../grupos/nuevo`,
+  `.../grupos/:groupId` (`?tab=estudiantes|calendario|finanzas&clase=<sessionId>`), `.../grupos/:groupId/editar`.
+  Containers in `src/pages/admin/groups/` (`GroupsHub`, `GroupFormPage`, `GroupDetail`, `GroupFinanceTab`), presentational
+  pieces in `src/components/admin/groups/`, shared hook `useCourseOperations`. Reused and parametrized by group:
+  `RosterTab` (group column/filter, selection + bulk transfer/WhatsApp reminders, scoped enroll with group price and
+  `defaultAccessDates`), `RosterTable`, `AttendanceTab` (calendar/list/matrix, generate calendar, extra class, cancel/restore),
+  `SessionsList`, `EnrollStudentDialog`, `NewSessionDialog`, `RegisterPaymentDialog`, `VoidPaymentDialog`, `LedgerTable`,
+  `buildLedgerCsv`. Old `CourseGroup.tsx` removed; legacy classes without group stay reachable in the hub tab "Clases sin grupo".
+  Checks: `npm test` 175 passed; `npm run build` OK; `npx tsc --noEmit -p tsconfig.app.json` clean; eslint clean on all
+  touched/new files except pre-existing errors in untouched lines of `CourseEditor.tsx`. Not exercised in a browser (groups
+  migration not applied anywhere yet).
+
 ## Review findings (native review of T1+T2, fixed in `fix(db): harden enrollment access automation after review`)
 Route: delegated writer (2+ non-trivial files). Migration edited in place (never applied anywhere yet).
 1. Payment activation relabelled manual: `recompute_enrollment_access` sets the transaction-local flag
@@ -160,4 +177,4 @@ Route: delegated writer (2+ non-trivial files). Migration edited in place (never
    careful reading; NOT executed (no DB access from the writer).
 
 ## Next step
-T7b: groups admin UI (after the user runs the groups dry run). T5: browser walkthrough once migrations are applied.
+T7c (groups everywhere else). T5: browser walkthrough once migrations are applied.

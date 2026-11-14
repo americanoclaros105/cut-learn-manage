@@ -96,7 +96,7 @@ published modules/lessons).
 - T6: route delegated writer (2+ non-trivial files). Strict TDD for `src/lib/studentDetail.ts` (tabs, per-enrollment
   summary, KPIs, delete impact + typed confirmation, password generator, initials; RED "Failed to load url
   ./studentDetail" then GREEN) and `src/lib/studentSchemas.ts` (zod schemas + day<->ISO; RED then GREEN, 95 tests).
-  Commits `86bacc7` (domain + hooks) and the page commit below. Routes `/admin/estudiantes/nuevo` and
+  Commits `86bacc7` (domain + hooks) and `3f6d4ad` (pages). Routes `/admin/estudiantes/nuevo` and
   `/admin/estudiantes/:studentId?tab=resumen|datos|acceso|pagos|asistencia`; containers in `src/pages/admin/student/`,
   presentational pieces in `src/components/admin/students/detail/`. StudentForm modal and DeleteDialog removed;
   StudentsManager and StudentCard navigate to the pages. Status-action copy shared via

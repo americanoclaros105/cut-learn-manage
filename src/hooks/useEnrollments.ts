@@ -70,19 +70,22 @@ export interface EnrollStudentInput {
   agreedPrice: number;
   enabledFrom?: string | null;
   expiresAt?: string | null;
+  /** Optional group of the course; its price/capacity rules apply in the database. */
+  groupId?: string | null;
 }
 
 /** Creates a pending enrollment; the DB activates it right away when the agreed price is 0. */
 export const useEnrollStudent = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ userId, courseId, agreedPrice, enabledFrom, expiresAt }: EnrollStudentInput) => {
+    mutationFn: async ({ userId, courseId, agreedPrice, enabledFrom, expiresAt, groupId }: EnrollStudentInput) => {
       const { error } = await supabase.from('user_course_assignments').insert({
         user_id: userId,
         course_id: courseId,
         agreed_price: agreedPrice,
         enabled_from: enabledFrom || new Date().toISOString(),
         expires_at: expiresAt || null,
+        group_id: groupId || null,
       });
       if (error) throw error;
       return courseId;

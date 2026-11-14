@@ -193,3 +193,46 @@ export interface AttendanceStats {
   /** (present + late) / (total excluding excused); 0 when nothing counts. */
   rate: number;
 }
+
+// Course groups (cohorts)
+export type SessionStatus = 'scheduled' | 'cancelled';
+export type GroupPhase = 'upcoming' | 'in_progress' | 'finished' | 'archived';
+
+/** Weekly class slot of a group. weekday: 0 = Sunday ... 6 = Saturday; times are 'HH:MM' or 'HH:MM:SS'. */
+export interface GroupScheduleSlot {
+  weekday: number;
+  start_time: string;
+  end_time: string;
+}
+
+export interface CourseGroupSchedule extends GroupScheduleSlot {
+  id: string;
+  group_id: string;
+}
+
+export interface CourseGroup {
+  id: string;
+  course_id: string;
+  name: string;
+  /** 'YYYY-MM-DD' */
+  start_date: string;
+  end_date: string;
+  location: string | null;
+  instructor: string | null;
+  capacity: number | null;
+  /** Overrides the course price as the default agreed price. */
+  price: number | null;
+  color: string | null;
+  notes: string | null;
+  archived_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+/** A group with its weekly schedule and current occupancy (admin only). */
+export interface CourseGroupWithStats extends CourseGroup {
+  schedules: CourseGroupSchedule[];
+  enrolled: number;
+  /** null when the group has no capacity limit. */
+  seats_left: number | null;
+}

@@ -7,6 +7,8 @@ export const operationsKeys = {
   enrollmentPayments: (enrollmentId: string) => ['payments', 'enrollment', enrollmentId] as const,
   ledger: ['payments', 'ledger'] as const,
   receivables: ['enrollments', 'receivables'] as const,
+  groups: (courseId: string) => ['groups', courseId] as const,
+  group: (groupId: string) => ['group', groupId] as const,
 };
 
 /**
@@ -21,4 +23,17 @@ export const invalidateOperations = (queryClient: QueryClient, courseId?: string
   queryClient.invalidateQueries({ queryKey: ['students'] });
   // Student detail page (profile, enrollments, payments, attendance of one student).
   queryClient.invalidateQueries({ queryKey: ['student'] });
+};
+
+/**
+ * Group changes (edit, schedule, transfer, generated sessions) touch the group
+ * lists, class sessions and, through enrollments, the roster and student pages.
+ */
+export const invalidateGroups = (queryClient: QueryClient, courseId?: string | null) => {
+  if (courseId) queryClient.invalidateQueries({ queryKey: operationsKeys.groups(courseId) });
+  else queryClient.invalidateQueries({ queryKey: ['groups'] });
+  queryClient.invalidateQueries({ queryKey: ['group'] });
+  if (courseId) queryClient.invalidateQueries({ queryKey: operationsKeys.sessions(courseId) });
+  else queryClient.invalidateQueries({ queryKey: ['class-sessions'] });
+  invalidateOperations(queryClient, courseId);
 };

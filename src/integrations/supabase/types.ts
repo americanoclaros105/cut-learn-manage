@@ -54,38 +54,148 @@ export type Database = {
       }
       class_sessions: {
         Row: {
+          cancel_reason: string | null
           course_id: string
           created_at: string
           ends_at: string | null
+          generated: boolean
+          group_id: string | null
           id: string
           location: string | null
           notes: string | null
           starts_at: string
+          status: string
           topic: string | null
         }
         Insert: {
+          cancel_reason?: string | null
           course_id: string
           created_at?: string
           ends_at?: string | null
+          generated?: boolean
+          group_id?: string | null
           id?: string
           location?: string | null
           notes?: string | null
           starts_at: string
+          status?: string
           topic?: string | null
         }
         Update: {
+          cancel_reason?: string | null
           course_id?: string
           created_at?: string
           ends_at?: string | null
+          generated?: boolean
+          group_id?: string | null
           id?: string
           location?: string | null
           notes?: string | null
           starts_at?: string
+          status?: string
           topic?: string | null
         }
         Relationships: [
           {
             foreignKeyName: "class_sessions_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "class_sessions_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "course_groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      course_group_schedules: {
+        Row: {
+          end_time: string
+          group_id: string
+          id: string
+          start_time: string
+          weekday: number
+        }
+        Insert: {
+          end_time: string
+          group_id: string
+          id?: string
+          start_time: string
+          weekday: number
+        }
+        Update: {
+          end_time?: string
+          group_id?: string
+          id?: string
+          start_time?: string
+          weekday?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "course_group_schedules_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "course_groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      course_groups: {
+        Row: {
+          archived_at: string | null
+          capacity: number | null
+          color: string | null
+          course_id: string
+          created_at: string
+          end_date: string
+          id: string
+          instructor: string | null
+          location: string | null
+          name: string
+          notes: string | null
+          price: number | null
+          start_date: string
+          updated_at: string
+        }
+        Insert: {
+          archived_at?: string | null
+          capacity?: number | null
+          color?: string | null
+          course_id: string
+          created_at?: string
+          end_date: string
+          id?: string
+          instructor?: string | null
+          location?: string | null
+          name: string
+          notes?: string | null
+          price?: number | null
+          start_date: string
+          updated_at?: string
+        }
+        Update: {
+          archived_at?: string | null
+          capacity?: number | null
+          color?: string | null
+          course_id?: string
+          created_at?: string
+          end_date?: string
+          id?: string
+          instructor?: string | null
+          location?: string | null
+          name?: string
+          notes?: string | null
+          price?: number | null
+          start_date?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "course_groups_course_id_fkey"
             columns: ["course_id"]
             isOneToOne: false
             referencedRelation: "courses"
@@ -595,6 +705,7 @@ export type Database = {
           course_id: string
           enabled_from: string | null
           expires_at: string | null
+          group_id: string | null
           id: string
           notes: string | null
           status: Database["public"]["Enums"]["enrollment_status"]
@@ -609,6 +720,7 @@ export type Database = {
           course_id: string
           enabled_from?: string | null
           expires_at?: string | null
+          group_id?: string | null
           id?: string
           notes?: string | null
           status?: Database["public"]["Enums"]["enrollment_status"]
@@ -623,6 +735,7 @@ export type Database = {
           course_id?: string
           enabled_from?: string | null
           expires_at?: string | null
+          group_id?: string | null
           id?: string
           notes?: string | null
           status?: Database["public"]["Enums"]["enrollment_status"]
@@ -635,6 +748,13 @@ export type Database = {
             columns: ["course_id"]
             isOneToOne: false
             referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_course_assignments_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "course_groups"
             referencedColumns: ["id"]
           },
         ]
@@ -659,7 +779,24 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      group_occupancy: {
+        Row: {
+          capacity: number | null
+          course_id: string | null
+          enrolled: number | null
+          group_id: string | null
+          seats_left: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "course_groups_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       apply_student_enrollments: {
@@ -674,6 +811,10 @@ export type Database = {
           module_count: number
         }[]
       }
+      generate_group_sessions: {
+        Args: { _group_id: string; _replace_future?: boolean }
+        Returns: number
+      }
       has_course_access: {
         Args: { _course_id: string; _user_id: string }
         Returns: boolean
@@ -683,6 +824,18 @@ export type Database = {
           _role: Database["public"]["Enums"]["app_role"]
           _user_id: string
         }
+        Returns: boolean
+      }
+      replace_group_schedules: {
+        Args: { _group_id: string; _items: Json }
+        Returns: undefined
+      }
+      transfer_enrollment_group: {
+        Args: { _enrollment_id: string; _group_id: string }
+        Returns: undefined
+      }
+      user_in_group: {
+        Args: { _group_id: string; _user_id: string }
         Returns: boolean
       }
     }

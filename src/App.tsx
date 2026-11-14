@@ -26,6 +26,7 @@ import { GroupFormPage } from "./pages/admin/groups/GroupFormPage";
 import { GroupDetail } from "./pages/admin/groups/GroupDetail";
 import { LegacyGroupRedirect } from "./pages/admin/groups/LegacyGroupRedirect";
 import { Accounting } from "./pages/admin/Accounting";
+import { Agenda } from "./pages/admin/Agenda";
 import { StudentCreate } from "./pages/admin/student/StudentCreate";
 import { StudentDetail } from "./pages/admin/student/StudentDetail";
 
@@ -57,6 +58,7 @@ const App = () => (
               }
             >
               <Route index element={<AdminDashboard />} />
+              <Route path="agenda" element={<Agenda />} />
               <Route path="landing" element={<LandingEditor />} />
               <Route path="cursos" element={<CoursesManager />} />
               <Route path="cursos/nuevo" element={<CourseEditor />} />

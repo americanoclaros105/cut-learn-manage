@@ -1,5 +1,9 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useMemo } from 'react';
+import { TodayClassesCard, UpcomingGroupsCard } from '@/components/admin/dashboard/AcademyAgendaCards';
+import { useAgendaSessions, useUpcomingGroups } from '@/hooks/useAgenda';
 import { useCourses } from '@/hooks/useCourses';
+import { agendaRange, sessionsOfDay } from '@/lib/agenda';
 import { useStudents } from '@/hooks/useStudents';
 import { Users, GraduationCap, BookOpen, TrendingUp, Loader2 } from 'lucide-react';
 import { AnalyticsDashboard } from '@/components/admin/AnalyticsDashboard';
@@ -7,6 +11,13 @@ import { AnalyticsDashboard } from '@/components/admin/AnalyticsDashboard';
 export const AdminDashboard = () => {
   const { data: courses = [], isLoading: loadingCourses } = useCourses();
   const { data: students = [], isLoading: loadingStudents } = useStudents();
+
+  const today = useAgendaSessions(useMemo(() => agendaRange('day', new Date()), []));
+  const upcomingGroups = useUpcomingGroups(5);
+  const todayClasses = useMemo(
+    () => sessionsOfDay(today.data ?? [], new Date()).filter((s) => s.status === 'scheduled'),
+    [today.data],
+  );
 
   const publishedCourses = courses.filter((c) => c.status === 'published');
   const activeStudents = students.filter((s) => s.status === 'active');
@@ -82,6 +93,11 @@ export const AdminDashboard = () => {
             </CardContent>
           </Card>
         ))}
+      </div>
+
+      <div className="mt-8 grid lg:grid-cols-2 gap-6">
+        <TodayClassesCard sessions={todayClasses} loading={today.isLoading} />
+        <UpcomingGroupsCard groups={upcomingGroups.data ?? []} loading={upcomingGroups.isLoading} />
       </div>
 
       <div className="mt-8 grid lg:grid-cols-2 gap-6">

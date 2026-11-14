@@ -1,6 +1,7 @@
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import {
+  CalendarDays,
   LayoutDashboard,
   FileEdit,
   GraduationCap,
@@ -14,6 +15,7 @@ import logo from '@/assets/logo.png';
 
 const menuItems = [
   { icon: LayoutDashboard, label: 'Dashboard', path: '/admin' },
+  { icon: CalendarDays, label: 'Agenda', path: '/admin/agenda' },
   { icon: FileEdit, label: 'Editar Landing', path: '/admin/landing' },
   { icon: GraduationCap, label: 'Cursos', path: '/admin/cursos' },
   { icon: Users, label: 'Estudiantes', path: '/admin/estudiantes' },

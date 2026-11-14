@@ -75,7 +75,7 @@ export const RollCall = ({ session, rows, draft, dirty, saving, onChange, onMark
 
       {rows.length === 0 ? (
         <p className="rounded-lg border border-dashed p-8 text-center text-sm text-muted-foreground">
-          No hay estudiantes inscritos en este curso.
+          No hay estudiantes inscritos.
         </p>
       ) : (
         <ul className="space-y-2">

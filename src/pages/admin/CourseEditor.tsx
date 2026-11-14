@@ -172,9 +172,9 @@ export const CourseEditor = () => {
         </div>
         <div className="flex items-center gap-2">
           {isEditing && (
-            <Button variant="outline" className="gap-2" onClick={() => navigate(`/admin/cursos/${courseId}/grupo`)}>
+            <Button variant="outline" className="gap-2" onClick={() => navigate(`/admin/cursos/${courseId}/grupos`)}>
               <ClipboardList className="w-4 h-4" />
-              Grupo y asistencia
+              Grupos
             </Button>
           )}
           <Button

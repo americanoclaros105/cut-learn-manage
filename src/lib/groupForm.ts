@@ -32,7 +32,7 @@ export const nextGroupName = (existingNames: string[]): string => {
 };
 
 /** First palette color not used by another group; cycles when all are taken. */
-export const nextGroupColor = (usedColors: Array<string | null | undefined>): string => {
+export const nextGroupColor = (usedColors: ReadonlyArray<string | null | undefined>): string => {
   const used = new Set(usedColors.filter((c): c is string => !!c).map(normalize));
   return GROUP_COLORS.find((c) => !used.has(c)) ?? GROUP_COLORS[usedColors.length % GROUP_COLORS.length];
 };
@@ -158,6 +158,18 @@ export const schedulePreview = (startDate: string, endDate: string, slots: Group
   return { count, dates, text };
 };
 
+/** Every (year, 0-based month) touched by the range, capped so a typo like year 2300 cannot render forever. */
+export const monthsBetween = (startDate: string, endDate: string, max = 24): Array<{ year: number; month: number }> => {
+  if (!startDate || !endDate || endDate < startDate) return [];
+  const [sy, sm] = startDate.split('-').map(Number);
+  const [ey, em] = endDate.split('-').map(Number);
+  const out: Array<{ year: number; month: number }> = [];
+  for (let index = sy * 12 + (sm - 1); index <= ey * 12 + (em - 1) && out.length < max; index += 1) {
+    out.push({ year: Math.floor(index / 12), month: index % 12 });
+  }
+  return out;
+};
+
 export interface MonthCell {
   day: number;
   iso: string;
@@ -192,7 +204,6 @@ export interface GroupFormCore {
   end_date: string;
   /** Raw text of the capacity input. */
   capacity: string;
-  price?: string;
 }
 
 export type GroupFormErrors = Partial<Record<'name' | 'start_date' | 'end_date' | 'capacity', string>>;

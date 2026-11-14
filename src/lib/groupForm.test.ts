@@ -4,6 +4,7 @@ import {
   emptyScheduleRow,
   formatDayLabel,
   monthGrid,
+  monthsBetween,
   nextGroupColor,
   nextGroupName,
   rowsToSlots,
@@ -213,5 +214,30 @@ describe('validateGroupForm', () => {
     expect(validateGroupForm({ ...valid, capacity: '' })).toEqual({});
     expect(validateGroupForm({ ...valid, capacity: '0' }).capacity).toBe('El cupo debe ser un número entero mayor que 0.');
     expect(validateGroupForm({ ...valid, capacity: '2.5' }).capacity).toBe('El cupo debe ser un número entero mayor que 0.');
+  });
+});
+
+describe('monthsBetween', () => {
+  it('lists every month touched by the range, inclusive', () => {
+    expect(monthsBetween('2030-01-20', '2030-03-05')).toEqual([
+      { year: 2030, month: 0 },
+      { year: 2030, month: 1 },
+      { year: 2030, month: 2 },
+    ]);
+  });
+
+  it('crosses years and handles a single month', () => {
+    expect(monthsBetween('2030-11-10', '2031-01-02')).toEqual([
+      { year: 2030, month: 10 },
+      { year: 2030, month: 11 },
+      { year: 2031, month: 0 },
+    ]);
+    expect(monthsBetween('2030-05-01', '2030-05-31')).toEqual([{ year: 2030, month: 4 }]);
+  });
+
+  it('returns nothing for missing or reversed dates and caps very long ranges', () => {
+    expect(monthsBetween('', '2030-05-31')).toEqual([]);
+    expect(monthsBetween('2030-06-01', '2030-05-31')).toEqual([]);
+    expect(monthsBetween('2030-01-01', '2040-01-01', 12)).toHaveLength(12);
   });
 });

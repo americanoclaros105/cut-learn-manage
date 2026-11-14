@@ -105,8 +105,8 @@ export const EnrollmentCard = ({ row, onAction }: EnrollmentCardProps) => {
                 )}
                 <DropdownMenuSeparator />
                 <DropdownMenuItem asChild>
-                  <Link to={`/admin/cursos/${enrollment.course_id}/grupo`}>
-                    <Users className="mr-2 h-4 w-4" aria-hidden /> Ver grupo del curso
+                  <Link to={`/admin/cursos/${enrollment.course_id}/grupos`}>
+                    <Users className="mr-2 h-4 w-4" aria-hidden /> Ver grupos del curso
                   </Link>
                 </DropdownMenuItem>
               </DropdownMenuContent>

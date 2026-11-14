@@ -28,6 +28,10 @@ interface EnrollStudentDialogProps {
   onOpenChange: (open: boolean) => void;
   courseTitle: string;
   coursePrice: number;
+  /** When enrolling straight into a group: its name, and the dates ('YYYY-MM-DD') that prefill the access window. */
+  groupName?: string;
+  defaultEnabledFrom?: string;
+  defaultExpiresAt?: string;
   /** Students that are not enrolled in this course yet. */
   students: EnrollableStudent[];
   loadingStudents?: boolean;
@@ -40,6 +44,9 @@ export const EnrollStudentDialog = ({
   onOpenChange,
   courseTitle,
   coursePrice,
+  groupName,
+  defaultEnabledFrom = '',
+  defaultExpiresAt = '',
   students,
   loadingStudents,
   submitting,
@@ -57,9 +64,9 @@ export const EnrollStudentDialog = ({
     setStudentId(null);
     setPriceText(formatMoneyInput(coursePrice));
     setPrice(coursePrice);
-    setEnabledFrom('');
-    setExpiresAt('');
-  }, [open, coursePrice]);
+    setEnabledFrom(defaultEnabledFrom);
+    setExpiresAt(defaultExpiresAt);
+  }, [open, coursePrice, defaultEnabledFrom, defaultExpiresAt]);
 
   const selected = students.find((s) => s.id === studentId);
 
@@ -82,7 +89,7 @@ export const EnrollStudentDialog = ({
           <DialogHeader>
             <DialogTitle>Inscribir estudiante</DialogTitle>
             <DialogDescription>
-              {courseTitle}. La inscripción queda pendiente de pago y se activa al completar el valor acordado.
+              {groupName ? `${courseTitle} · ${groupName}` : courseTitle}. La inscripción queda pendiente de pago y se activa al completar el valor acordado.
             </DialogDescription>
           </DialogHeader>
 

@@ -1,8 +1,9 @@
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { Banknote, Ban, CircleCheck, Edit, Eye, MessageCircle, MoreHorizontal, Pause, Play } from 'lucide-react';
+import { ArrowRightLeft, Banknote, Ban, CircleCheck, Edit, Eye, MessageCircle, MoreHorizontal, Pause, Play } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Progress } from '@/components/ui/progress';
 import {
   DropdownMenu,
@@ -15,14 +16,36 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { formatCOP } from '@/lib/operations';
 import type { RosterRow } from '@/lib/roster';
 import { openWhatsAppMessage } from '@/lib/whatsapp';
+import { GroupDot } from '../groups/GroupDot';
 import { EnrollmentStatusBadge } from './EnrollmentStatusBadge';
 
-export type RosterAction = 'pay' | 'payments' | 'price' | 'authorize' | 'suspend' | 'reactivate' | 'cancel';
+export type RosterAction = 'pay' | 'payments' | 'price' | 'transfer' | 'authorize' | 'suspend' | 'reactivate' | 'cancel';
+
+export interface RosterSelection {
+  selected: Set<string>;
+  onToggle: (enrollmentId: string) => void;
+  onToggleAll: (enrollmentIds: string[], checked: boolean) => void;
+}
 
 interface RosterTableProps {
   rows: RosterRow[];
   onAction: (action: RosterAction, row: RosterRow) => void;
+  /** Group names by id. When given, a Grupo column and the transfer action appear. */
+  groups?: Record<string, { name: string; color: string | null }>;
+  /** Row checkboxes for bulk actions. */
+  selection?: RosterSelection;
 }
+
+const GroupLabel = ({ row, groups }: { row: RosterRow; groups: NonNullable<RosterTableProps['groups']> }) => {
+  const group = row.enrollment.group_id ? groups[row.enrollment.group_id] : undefined;
+  return group ? (
+    <span className="inline-flex items-center gap-1.5 text-sm">
+      <GroupDot color={group.color} /> {group.name}
+    </span>
+  ) : (
+    <span className="text-sm text-muted-foreground">Sin grupo</span>
+  );
+};
 
 const formatDay = (value: string | null): string =>
   value ? format(new Date(`${value.slice(0, 10)}T00:00:00`), 'dd MMM yyyy', { locale: es }) : 'Sin pagos';
@@ -59,7 +82,7 @@ const attendanceLabel = (row: RosterRow): string =>
     ? '—'
     : `${Math.round(row.attendance.rate * 100)}%`;
 
-const RowActions = ({ row, onAction }: { row: RosterRow; onAction: RosterTableProps['onAction'] }) => {
+const RowActions = ({ row, onAction, canTransfer }: { row: RosterRow; onAction: RosterTableProps['onAction']; canTransfer: boolean }) => {
   const status = row.enrollment.status;
   const cancelled = status === 'cancelled';
   return (
@@ -81,6 +104,12 @@ const RowActions = ({ row, onAction }: { row: RosterRow; onAction: RosterTablePr
         {!cancelled && (
           <DropdownMenuItem onSelect={() => onAction('price', row)}>
             <Edit className="mr-2 h-4 w-4" /> Editar valor acordado
+          </DropdownMenuItem>
+        )}
+        {!cancelled && canTransfer && (
+          <DropdownMenuItem onSelect={() => onAction('transfer', row)}>
+            <ArrowRightLeft className="mr-2 h-4 w-4" />
+            {row.enrollment.group_id ? 'Trasladar a otro grupo' : 'Asignar a un grupo'}
           </DropdownMenuItem>
         )}
         <DropdownMenuSeparator />
@@ -110,86 +139,118 @@ const RowActions = ({ row, onAction }: { row: RosterRow; onAction: RosterTablePr
 };
 
 /** Desktop table plus mobile cards over the same rows. */
-export const RosterTable = ({ rows, onAction }: RosterTableProps) => (
-  <>
-    <div className="hidden md:block rounded-lg border bg-card">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Estudiante</TableHead>
-            <TableHead>Estado</TableHead>
-            <TableHead className="text-right">Valor acordado</TableHead>
-            <TableHead className="text-right">Pagado</TableHead>
-            <TableHead>Saldo</TableHead>
-            <TableHead className="text-right">Asistencia</TableHead>
-            <TableHead>Último pago</TableHead>
-            <TableHead className="w-12">
-              <span className="sr-only">Acciones</span>
-            </TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {rows.map((row) => (
-            <TableRow key={row.enrollment.id}>
-              <TableCell>
-                <p className="font-medium">{row.student.name}</p>
-                <PhoneLink row={row} />
-              </TableCell>
-              <TableCell>
-                <EnrollmentStatusBadge status={row.enrollment.status} />
-                {row.enrollment.activated_by === 'manual' && (
-                  <p className="mt-1 text-xs text-muted-foreground">Autorizado manualmente</p>
-                )}
-              </TableCell>
-              <TableCell className="text-right tabular-nums">{formatCOP(row.agreed)}</TableCell>
-              <TableCell className="text-right tabular-nums">{formatCOP(row.paid)}</TableCell>
-              <TableCell>
-                <Balance row={row} />
-              </TableCell>
-              <TableCell className="text-right tabular-nums">{attendanceLabel(row)}</TableCell>
-              <TableCell className="whitespace-nowrap text-sm">{formatDay(row.lastPaymentAt)}</TableCell>
-              <TableCell>
-                <RowActions row={row} onAction={onAction} />
-              </TableCell>
+export const RosterTable = ({ rows, onAction, groups, selection }: RosterTableProps) => {
+  const allSelected = !!selection && rows.length > 0 && rows.every((r) => selection.selected.has(r.enrollment.id));
+  const canTransfer = !!groups;
+  const rowCheckbox = (row: RosterRow) =>
+    selection && (
+      <Checkbox
+        checked={selection.selected.has(row.enrollment.id)}
+        onCheckedChange={() => selection.onToggle(row.enrollment.id)}
+        aria-label={`Seleccionar a ${row.student.name}`}
+      />
+    );
+  return (
+    <>
+      <div className="hidden md:block rounded-lg border bg-card">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              {selection && (
+                <TableHead className="w-10">
+                  <Checkbox
+                    checked={allSelected}
+                    onCheckedChange={(checked) => selection.onToggleAll(rows.map((r) => r.enrollment.id), checked === true)}
+                    aria-label="Seleccionar todos los estudiantes visibles"
+                  />
+                </TableHead>
+              )}
+              <TableHead>Estudiante</TableHead>
+              {groups && <TableHead>Grupo</TableHead>}
+              <TableHead>Estado</TableHead>
+              <TableHead className="text-right">Valor acordado</TableHead>
+              <TableHead className="text-right">Pagado</TableHead>
+              <TableHead>Saldo</TableHead>
+              <TableHead className="text-right">Asistencia</TableHead>
+              <TableHead>Último pago</TableHead>
+              <TableHead className="w-12">
+                <span className="sr-only">Acciones</span>
+              </TableHead>
             </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-    </div>
+          </TableHeader>
+          <TableBody>
+            {rows.map((row) => (
+              <TableRow key={row.enrollment.id} data-state={selection?.selected.has(row.enrollment.id) ? 'selected' : undefined}>
+                {selection && <TableCell>{rowCheckbox(row)}</TableCell>}
+                <TableCell>
+                  <p className="font-medium">{row.student.name}</p>
+                  <PhoneLink row={row} />
+                </TableCell>
+                {groups && (
+                  <TableCell>
+                    <GroupLabel row={row} groups={groups} />
+                  </TableCell>
+                )}
+                <TableCell>
+                  <EnrollmentStatusBadge status={row.enrollment.status} />
+                  {row.enrollment.activated_by === 'manual' && (
+                    <p className="mt-1 text-xs text-muted-foreground">Autorizado manualmente</p>
+                  )}
+                </TableCell>
+                <TableCell className="text-right tabular-nums">{formatCOP(row.agreed)}</TableCell>
+                <TableCell className="text-right tabular-nums">{formatCOP(row.paid)}</TableCell>
+                <TableCell>
+                  <Balance row={row} />
+                </TableCell>
+                <TableCell className="text-right tabular-nums">{attendanceLabel(row)}</TableCell>
+                <TableCell className="whitespace-nowrap text-sm">{formatDay(row.lastPaymentAt)}</TableCell>
+                <TableCell>
+                  <RowActions row={row} onAction={onAction} canTransfer={canTransfer} />
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
 
-    <div className="grid gap-3 md:hidden">
-      {rows.map((row) => (
-        <Card key={row.enrollment.id}>
-          <CardContent className="space-y-3 p-4">
-            <div className="flex items-start justify-between gap-2">
-              <div>
-                <p className="font-medium">{row.student.name}</p>
-                <PhoneLink row={row} />
+      <div className="grid gap-3 md:hidden">
+        {rows.map((row) => (
+          <Card key={row.enrollment.id}>
+            <CardContent className="space-y-3 p-4">
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex items-start gap-3">
+                  {rowCheckbox(row)}
+                  <div>
+                    <p className="font-medium">{row.student.name}</p>
+                    <PhoneLink row={row} />
+                    {groups && <GroupLabel row={row} groups={groups} />}
+                  </div>
+                </div>
+                <div className="flex items-center gap-1">
+                  <EnrollmentStatusBadge status={row.enrollment.status} />
+                  <RowActions row={row} onAction={onAction} canTransfer={canTransfer} />
+                </div>
               </div>
-              <div className="flex items-center gap-1">
-                <EnrollmentStatusBadge status={row.enrollment.status} />
-                <RowActions row={row} onAction={onAction} />
-              </div>
-            </div>
-            <Balance row={row} />
-            <dl className="grid grid-cols-3 gap-2 text-xs">
-              <div>
-                <dt className="text-muted-foreground">Acordado</dt>
-                <dd className="font-medium tabular-nums">{formatCOP(row.agreed)}</dd>
-              </div>
-              <div>
-                <dt className="text-muted-foreground">Pagado</dt>
-                <dd className="font-medium tabular-nums">{formatCOP(row.paid)}</dd>
-              </div>
-              <div>
-                <dt className="text-muted-foreground">Asistencia</dt>
-                <dd className="font-medium tabular-nums">{attendanceLabel(row)}</dd>
-              </div>
-            </dl>
-            <p className="text-xs text-muted-foreground">Último pago: {formatDay(row.lastPaymentAt)}</p>
-          </CardContent>
-        </Card>
-      ))}
-    </div>
-  </>
-);
+              <Balance row={row} />
+              <dl className="grid grid-cols-3 gap-2 text-xs">
+                <div>
+                  <dt className="text-muted-foreground">Acordado</dt>
+                  <dd className="font-medium tabular-nums">{formatCOP(row.agreed)}</dd>
+                </div>
+                <div>
+                  <dt className="text-muted-foreground">Pagado</dt>
+                  <dd className="font-medium tabular-nums">{formatCOP(row.paid)}</dd>
+                </div>
+                <div>
+                  <dt className="text-muted-foreground">Asistencia</dt>
+                  <dd className="font-medium tabular-nums">{attendanceLabel(row)}</dd>
+                </div>
+              </dl>
+              <p className="text-xs text-muted-foreground">Último pago: {formatDay(row.lastPaymentAt)}</p>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    </>
+  );
+};

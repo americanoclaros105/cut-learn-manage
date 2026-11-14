@@ -189,11 +189,11 @@ export const CoursesManager = () => {
                           className="gap-2"
                           onClick={(e) => {
                             e.stopPropagation();
-                            navigate(`/admin/cursos/${course.id}/grupo`);
+                            navigate(`/admin/cursos/${course.id}/grupos`);
                           }}
                         >
                           <ClipboardList className="w-4 h-4" />
-                          <span className="hidden sm:inline">Grupo y asistencia</span>
+                          <span className="hidden sm:inline">Grupos</span>
                         </Button>
                         <Button
                           size="sm"

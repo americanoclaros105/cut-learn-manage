@@ -21,7 +21,10 @@ import { LandingEditor } from "./pages/admin/LandingEditor";
 import { CoursesManager } from "./pages/admin/CoursesManager";
 import { CourseEditor } from "./pages/admin/CourseEditor";
 import { StudentsManager } from "./pages/admin/StudentsManager";
-import { CourseGroup } from "./pages/admin/CourseGroup";
+import { GroupsHub } from "./pages/admin/groups/GroupsHub";
+import { GroupFormPage } from "./pages/admin/groups/GroupFormPage";
+import { GroupDetail } from "./pages/admin/groups/GroupDetail";
+import { LegacyGroupRedirect } from "./pages/admin/groups/LegacyGroupRedirect";
 import { Accounting } from "./pages/admin/Accounting";
 import { StudentCreate } from "./pages/admin/student/StudentCreate";
 import { StudentDetail } from "./pages/admin/student/StudentDetail";
@@ -58,7 +61,11 @@ const App = () => (
               <Route path="cursos" element={<CoursesManager />} />
               <Route path="cursos/nuevo" element={<CourseEditor />} />
               <Route path="cursos/:courseId" element={<CourseEditor />} />
-              <Route path="cursos/:courseId/grupo" element={<CourseGroup />} />
+              <Route path="cursos/:courseId/grupo" element={<LegacyGroupRedirect />} />
+              <Route path="cursos/:courseId/grupos" element={<GroupsHub />} />
+              <Route path="cursos/:courseId/grupos/nuevo" element={<GroupFormPage />} />
+              <Route path="cursos/:courseId/grupos/:groupId" element={<GroupDetail />} />
+              <Route path="cursos/:courseId/grupos/:groupId/editar" element={<GroupFormPage />} />
               <Route path="estudiantes" element={<StudentsManager />} />
               <Route path="estudiantes/nuevo" element={<StudentCreate />} />
               <Route path="estudiantes/:studentId" element={<StudentDetail />} />

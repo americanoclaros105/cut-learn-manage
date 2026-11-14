@@ -17,10 +17,12 @@ interface NewSessionDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   submitting?: boolean;
+  /** Prefills the location (e.g. the one of the group). */
+  defaultLocation?: string;
   onSubmit: (values: NewSessionValues) => Promise<void> | void;
 }
 
-export const NewSessionDialog = ({ open, onOpenChange, submitting, onSubmit }: NewSessionDialogProps) => {
+export const NewSessionDialog = ({ open, onOpenChange, submitting, defaultLocation = '', onSubmit }: NewSessionDialogProps) => {
   const [startsAt, setStartsAt] = useState('');
   const [duration, setDuration] = useState('');
   const [topic, setTopic] = useState('');
@@ -31,8 +33,8 @@ export const NewSessionDialog = ({ open, onOpenChange, submitting, onSubmit }: N
     setStartsAt(format(new Date(), "yyyy-MM-dd'T'HH:mm"));
     setDuration('');
     setTopic('');
-    setLocation('');
-  }, [open]);
+    setLocation(defaultLocation);
+  }, [open, defaultLocation]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
